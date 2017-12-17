@@ -1,0 +1,291 @@
+<html>
+<head>
+<title>Signals</title>
+</head>
+
+<body>
+<h1>Signals</h1>
+
+There is a very easy, simple, and sometimes useful method for one
+process to bug another: signals.  Basically, one process can "raise" a
+signal and have it delivered to another process.  The destination
+process' signal handler (just a function) is invoked and the process can
+handle it.
+
+<p>
+For instance, one process might want to stop another one, and this can
+be done by sending the signal <tt>SIGSTOP</tt> to that process.  To
+continue, the process has to receive signal <tt>SIGCONT</tt>.  How does
+the process know to do this when it receives a certain signal?  Well,
+many signals are predefined and the process has a default signal
+handler to deal with it.
+
+<p>
+A default handler?  Yes.  Take <tt>SIGINT</tt> for example.  This is the
+interrupt signal that a process receives when the user hits ^C.  The
+default signal handler for <tt>SIGINT</tt> causes the process to exit!
+Sound familiar?  Well, as you can imagine, you can override the
+<tt>SIGINT</tt> to do whatever you want (or nothing at all!)  You could
+have your process <tt>printf()</tt> "Interrupt?!  No way, Jose!" and go
+about its merry business.
+
+<p>
+So now you know that you can have your process respond to just about any
+signal in just about any way you want.  Naturally, there are exceptions
+because otherwise it would be too easy to understand.  Take the ever
+popular <tt>SIGKILL</tt>, signal #9.  Have you ever typed
+<nobr>"<tt>kill -9 <i>nnnn</i></tt>"</nobr> to kill a runaway process?
+You were sending it <tt>SIGKILL</tt>.  Now you might also remember that
+no process can get out of a <nobr>"kill -9",</nobr> and you would be
+correct.  <tt>SIGKILL</tt> is one of the signals you <i>can't</i> add
+your own signal handler for.  The aforementioned <tt>SIGSTOP</tt> is
+also in this category.
+
+<p>
+(Aside: you often use the Unix "kill" command without specifying a
+signal to send...so what signal is it?  The answer: <tt>SIGTERM</tt>.
+You can write your own handler for <tt>SIGTERM</tt> so your process
+won't respond to a regular "kill", and the user must then use "kill -9"
+to destroy the process.)
+
+<p>
+Are all the signals predefined?  What if you want to send a signal that
+has significance that only you understand to a process?  There are two
+signals that aren't reserved: <tt>SIGUSR1</tt> and <tt>SIGUSER2</tt>.
+You are free to use these for whatever you want and handle them in
+whatever way you choose.  (For example, my cd player program might
+respond to <tt>SIGUSR1</tt> by advancing to the next track.  In this
+way, I could control it from the command line by typing <nobr>"<tt>kill
+-SIGUSR1 <i>nnnn</i></tt>".)</nobr>
+
+<h2>You can't <tt>SIGKILL</tt> the President!</h2>
+
+As you can guess the Unix "kill" command is one way to send signals to a
+process.  By sheer unbelievable coincidence, there is a system call
+called <tt>kill()</tt> which does the same thing.  It takes for its
+argument a signal number (as defined in <tt>signal.h</tt> and a process
+ID.  Also, there is a library routine called <tt>raise()</tt> which can
+be used to raise a signal within the same process.
+
+<p>
+The burning question remains: how do you catch a speeding
+<tt>SIGTERM</tt>?  You need to use the <tt>signal()</tt> call and pass
+it a pointer to a function that is to be your signal handler.  Never
+used pointers to functions?  (You must check out the <tt>qsort()</tt>
+routine sometime!)  Don't worry, they're simple: if
+"<tt>foo("hi!");</tt>" is a call to function <tt>foo()</tt>, then
+"<tt>foo</tt>" is a pointer to that function.  You don't even have to
+use the address-of operator.
+
+<p>
+Anyway, here's the <tt>signal()</tt> breakdown:
+
+<p>
+<pre>
+    void (*signal(int sig, void (*func)(int)))(int);
+</pre>
+
+<p>
+What is the name of Bruce Dickinson does that mean?  Well, the basic
+situation is this: we are going to pass the signal to be handled as well
+as the address of the signal handler as arguments to the
+<tt>signal()</tt> call.  The signal handler function that you define
+takes a single <tt>int</tt> as an argument, and returns <tt>void</tt>.
+Now, the <tt>signal()</tt> call returns either an error, or <i>a pointer
+to the previous signal handler function</i>.  So we have the call
+<tt>signal()</tt> which accepts a signal and a pointer to a handler as
+arguments, and returns a pointer to the previous handler.  And the above
+code is just how we declare that.
+
+<p>
+Fortunately, using it is much easier than it looks.  All you need is a
+handler function that takes an <tt>int</tt> as an argument and returns
+<tt>void</tt>.  Then call <tt>signal()</tt> to set it up.  Easy?  Let's
+do a simple program that will handle <tt>SIGINT</tt> and stop the user
+from quitting through ^C, called <tt><a href=sigint.c>sigint.c</a></tt>:
+
+<p>
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;errno.h&gt;
+    #include &lt;signal.h&gt;
+
+    int main(void)
+    {
+        void sigint_handler(int sig); /* prototype */
+        char s[200];
+    
+                /* set up the handler */
+        if (signal(SIGINT, sigint_handler) == SIG_ERR) {
+            perror("signal");
+            exit(1);
+        }
+    
+        printf("Enter a string:\n");
+    
+        if (gets(s) == NULL)
+            perror("gets");
+        else 
+            printf("You entered: \"%s\"\n", s);
+    
+        return 0;
+    }
+    
+        /* this is the handler */
+    void sigint_handler(int sig)
+    {
+        printf("Not this time!\n");
+    }
+</pre>
+
+<p>
+This program has two functions: <tt>main()</tt> which sets up the signal
+handler (using the <tt>signal()</tt> call), and
+<tt>sigint_handler()</tt> which is the signal handler, itself.
+
+<p>
+What happens when you run it?  If you are in the midst of entering a
+string and you hit ^C, the call to <tt>gets()</tt> fails and sets the
+global variable <tt>errno</tt> to 
+<tt>EINTR</tt>.  Additionally, <tt>sigint_handler()</tt> is called and
+does its routine, so you actually see:
+
+<p>
+<pre>
+    Enter a string:
+    the quick brown fox jum<b>^C</b>Not this time!
+    gets: Interrupted system call
+</pre>
+
+<p>
+Here's a vital tidbit of information that I neglected to mention
+earlier: when the signal handler is called, the signal handler for that
+particular signal is reset to the default handler!  The practical upshot
+of this is that our <tt>sigint_handler()</tt> would trap ^C the first
+time we hit it, but not after that.  The quick and dirty solution is to
+reset the signal handler within itself like so:
+
+<p>
+<pre>
+    void sigint_handler(int sig)
+    {
+        signal(SIGINT, sigint_handler); /* reset it to this function */
+        printf("Not this time!\n");
+    }
+</pre>
+
+<p>
+The problem with this setup is that it introduces a race condition.  If
+an interrupt occurs and the handler is called, but then a second
+interrupts occurs before the first is able to reset the interrupt
+handler, the default handler will be called.  Be aware that if you're
+expecting lots of signals this might be an issue to watch out for.
+
+<p>
+<h2>Everything you know is wrong</h2>
+
+<p>
+The <tt>signal()</tt> system call is the historical method of setting up
+signals.  The POSIX standard has defined a whole slew of new functions
+for masking which signals you want to receive, checking which signals
+are pending, and setting up signal handlers.  Since many of these calls
+operate on groups, or <i>sets</i>, of signals, there are more functions
+that deal with signal set manipulation.
+
+<p>
+In short, the new method of signal handling blows the old one away.  I
+will include a description in an up-and-coming version of this document,
+time permitting.
+
+<p>
+<h2>Some signals to make you popular</h2>
+
+<p>
+Here is a list of signals you (most likely) have at your disposal:
+
+<p>
+<center>
+<table border=1>
+
+      <th>Signal          <th>Description
+
+      <tr><td>SIGABRT         <td>Process abort signal.
+      <tr><td>SIGALRM         <td>Alarm clock.
+      <tr><td>SIGFPE          <td>Erroneous arithmetic operation.
+      <tr><td>SIGHUP          <td>Hangup.
+      <tr><td>SIGILL          <td>Illegal instruction.
+      <tr><td>SIGINT          <td>Terminal interrupt signal.
+      <tr><td>SIGKILL         <td>Kill (cannot be caught or ignored).
+      <tr><td>SIGPIPE         <td>Write on a pipe with no one to read it.
+      <tr><td>SIGQUIT         <td>Terminal quit signal.
+      <tr><td>SIGSEGV         <td>Invalid memory reference.
+      <tr><td>SIGTERM         <td>Termination signal.
+      <tr><td>SIGUSR1         <td>User-defined signal 1.
+      <tr><td>SIGUSR2         <td>User-defined signal 2.
+      <tr><td>SIGCHLD         <td>Child process terminated or stopped.
+      <tr><td>SIGCONT         <td>Continue executing, if stopped.
+      <tr><td>SIGSTOP         <td>Stop executing (cannot be caught or ignored).
+      <tr><td>SIGTSTP         <td>Terminal stop signal.
+      <tr><td>SIGTTIN         <td>Background process attempting read.
+      <tr><td>SIGTTOU         <td>Background process attempting write.
+      <tr><td>SIGBUS          <td>Bus error.
+      <tr><td>SIGPOLL         <td>Pollable event.
+      <tr><td>SIGPROF         <td>Profiling timer expired.
+      <tr><td>SIGSYS          <td>Bad system call.
+      <tr><td>SIGTRAP         <td>Trace/breakpoint trap.
+      <tr><td>SIGURG          <td>High bandwidth data is available at a socket.
+      <tr><td>SIGVTALRM       <td>Virtual timer expired.
+      <tr><td>SIGXCPU         <td>CPU time limit exceeded.
+      <tr><td>SIGXFSZ         <td>File size limit exceeded.
+</table>
+<b>Table 1.  Common signals.</b>
+</center>
+
+<p>
+Each signal has its own default signal handler, the behavior of which is
+defined in your local man pages.
+
+<p>
+<h2>Linux man pages</h2>
+
+<p>
+<i>If you don't run Linux, be sure to check your local man pages!</i>
+
+<p>
+<ul>
+<li><tt><a href=man.cgi?1+kill>kill</a></tt>
+<li><tt><a href=man.cgi?2+kill>kill()</a></tt>
+<li><tt><a href=man.cgi?3+raise>raise()</a></tt>
+<li><tt><a href=man.cgi?2+signal>signal()</a></tt>
+<li><tt><a href=man.cgi?7+signal>signals</a></tt>
+</ul>
+
+<p>
+<i>Here are the man pages for some of the POSIX signal handling
+routines...</i>
+
+<p>
+<ul>
+<li><tt><a href=man.cgi?2+sigaction>sigaction()</a></tt>
+<li><tt><a href=man.cgi?2+sigprocmask>sigprocmask()</a></tt>
+<li><tt><a href=man.cgi?2+sigpending>sigpending()</a></tt>
+<li><tt><a href=man.cgi?2+sigsuspend>sigsuspend()</a></tt>
+<li><tt><a href=man.cgi?2+sigsetops>sigsetops</a></tt>
+
+</ul>
+
+<hr>
+<a href=http://www.ecst.csuchico.edu/~beej/guide/ipc/>Back to the IPC main page</a>
+(http://www.ecst.csuchico.edu/~beej/guide/ipc/)
+
+<p>
+
+<small><b>Copyright &copy 1997 by Brian "Beej" Hall.  This guide may be
+reprinted in any medium provided that its content is not altered, it is
+presented in its entirety, and this copyright notice remains
+intact.  Contact <i><a href=mailto:beej@ecst.csuchico.edu>beej@ecst.csuchico.edu</a></i> for
+more information.</b></small>
+
+</body>
+</html>

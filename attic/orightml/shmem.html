@@ -1,0 +1,328 @@
+<html>
+<head>
+<title>Shared Memory Segments</title>
+</head>
+
+<body>
+<h1>Shared Memory Segments</h1>
+
+The cool thing about shared memory segments is that they are what they
+sound like: a segment of memory that is shared between processes.  I
+mean, think of the potential of this!  You could allocate a block a
+player information for a multi-player game and have each process access
+it at will!  Fun, fun, fun.
+
+<p>
+There are, as usual, more gotchas to watch out for, but it's all pretty
+easy in the long run.  See, you just connect to the shared memory
+segment, and get a pointer to the memory.  You can read and write to
+this pointer and all changes you make will be visible to everyone else
+connected to the segment.  There is nothing simpler.  Well, there is,
+actually, but I was just trying to make you more comfortable.
+
+<h2>Creating the segment and connecting</h2>
+
+Similarly to other forms of System V IPC, a shared memory segment is
+created and connected to via the <tt>shmget()</tt> call:
+
+<p>
+<pre>
+    int shmget(key_t <i>key</i>, size_t <i>size</i>, int <i>shmflg</i>);
+</pre>
+
+<p>
+Upon successful completion, <tt>shmget()</tt> returns an identifier for
+the shared memory segment.  The <tt><i>key</i></tt> argument should be
+created the same was as shown in the <a href=mq.html#ftok>Message
+Queues</a> document, using <tt>ftok()</tt>.  The next argument,
+<tt><i>size</i></tt>, is the size in bytes of the shared memory segment.
+Finally, the <tt><i>shmflg</i></tt> should be set to the permissions of
+the segment bitwise-ORd with <tt>IPC_CREAT</tt> if you want to create
+the segment, but can be <tt>0</tt> otherwise.  (It doesn't hurt to
+specify <tt>IPC_CREAT</tt> every time--it will simply connect you if the
+segment already exists.)
+
+<p>
+Here's an example call that creates a 1K segment with <tt>644</tt>
+permissions (<tt>rw-r--r--</tt>):
+
+<p>
+<pre>
+    key_t key;
+    int shmid;
+
+    key = ftok("/home/beej/somefile3", 'R');
+    shmid = shmget(key, 1024, 0644 | IPC_CREAT);
+</pre>
+
+<p>
+But how do you get a pointer to that data from the <tt>shmid</tt>
+handle?  The answer is in the call <tt>shmat()</tt>, in the following
+section.
+
+<h2>Attach me--getting a pointer to the segment</h2>
+
+Before you can use a shared memory segment, you have to attach yourself
+to it using the <tt>shmat()</tt> call:
+
+<p>
+<pre>
+    void *shmat(int <i>shmid</i>, void *<i>shmaddr</i>, int <i>shmflg</i>);
+</pre>
+
+<p>
+What does it all mean?  Well, <tt><i>shmid</i></tt> is the shared memory
+ID you got from the call to <tt>shmget()</tt>.  Next is
+<tt><i>shmaddr</i></tt>, which you can use to tell <tt>shmat()</tt>
+which specific address to use but you should just set it to <tt>0</tt>
+and let the OS choose the address for you.  Finally, the
+<tt><i>shmflg</i></tt> can be set to <tt>SHM_RDONLY</tt> if you only
+want to read from it, <tt>0</tt> otherwise.
+
+<p>
+Here's a more complete example of how to get a pointer to a shared
+memory segment:
+
+<p>
+<pre>
+    key_t key;
+    int shmid;
+    char *data;
+
+    key = ftok("/home/beej/somefile3", 'R');
+    shmid = shmget(key, 1024, 0644 | IPC_CREAT);
+    data = shmat(shmid, (void *)0, 0);
+</pre>
+
+<p>
+And <i>bammo</i>!  You have the pointer to the shared memory segment!
+Notice that <tt>shmat()</tt> returns a <tt>void</tt> pointer, and we're
+treating it, in this case, as a <tt>char</tt> pointer.  You can treat is
+as anything you like, depending on what kind of data you have in there.
+Pointers to arrays of structures are just as acceptable as anything
+else.
+
+<p>
+Also, it's interesting to note that <tt>shmat()</tt> returns <tt>-1</tt>
+on failure.  But how do you get <tt>-1</tt> in a <tt>void</tt> pointer?
+Just do a cast during the comparison to check for errors:
+
+<p>
+<pre>
+    data = shmat(shmid, (void *)0, 0);
+    if (data == (char *)(-1))
+        perror("shmat");
+</pre>
+
+<p>
+All you have to do now is change the data it points to normal
+pointer-style. There are some samples in the next section.
+
+<h2>Reading and Writing</h2>
+
+Lets say you have the <tt>data</tt> pointer from the above example.  It
+is a <tt>char</tt> pointer, so we'll be reading and writing chars from
+it.  Furthermore, for the sake of simplicity, lets say the 1K shared
+memory segment contains a null-terminated string.
+
+<p>
+It couldn't be easier.  Since it's just a string in there, we can print
+it like this:
+
+<p>
+<pre>
+    printf("shared contents: %s\n", data);
+</pre>
+
+<p>
+And we could store something in it as easily as this:
+
+<p>
+<pre>
+    printf("Enter a string: ");
+    gets(data);
+</pre>
+
+<p>
+Of course, like I said earlier, you can have other data in there besides
+just <tt>char</tt>s.  I'm just using them as an example.  I'll just make
+the assumption that you're familiar enough with pointers in C that
+you'll be able to deal with whatever kind of data you stick in there.
+
+<h2>Detaching from and deleting segments</h2>
+
+When you're done with the shared memory segment, your program should
+detach itself from it using the <tt>shmdt()</tt> call:
+
+<p>
+<pre>
+    int shmdt(void *<i>shmaddr</i>);
+</pre>
+
+<p>
+The only argument, <tt><i>shmaddr</i></tt>, is the address you got from
+<tt>shmat()</tt>.  The function returns <tt>-1</tt> on error, <tt>0</tt>
+on success.
+
+<p>
+When you detach from the segment, it isn't destroyed.  Nor is it removed
+when <i>everyone</i> detaches from it.  You have to specifically destroy
+it using a call to <tt>shmctl()</tt>, similar to the control calls for
+the other System V IPC functions:
+
+<p>
+<pre>
+    shmctl(shmid, IPC_RMID, NULL);
+</pre>
+
+<p>
+The above call deletes the shared memory segment, assuming no one else
+is attached to it.  The <tt>shmctl()</tt> function does a lot more than
+this, though, and it worth looking into.  (On your own, of course, since
+this is only an overview!)
+
+<p>
+As always, you can destroy the shared memory segment from the command
+line using the <tt>ipcrm</tt> Unix command.  Also, be sure that you
+don't leave any usused shared memory segments sitting around wasting
+system resources.  All the System V IPC objects you own can be viewed
+using the <tt>ipcs</tt> command.
+
+<a name=con></a><h2>Concurrency</h2>
+What are concurrency issues?  Well, since you have multiple processes
+modifying the shared memory segment, it is possible that certain errors
+could crop up when updates to the segment occur simultaneously.  This
+<i>concurrent</i> access is almost always a problem when you have
+multiple writers to a shared object.
+
+<p>
+The way to get around this is to use <a
+href=semaphores.html>Semaphores</a> to lock the shared memory segment
+while a process is writing to it.  (Sometimes the lock will encompass
+both a read an write to the shared memory, depending on what you're
+doing.)
+
+<p>
+A true discussion of concurrency is beyond the scope of this paper, and
+you might want to check out one of many books on the subject.  I'll just
+leave it with this: if you start getting weird inconsistencies in your
+shared data when you connect two or more processes to it, you could very
+well have a concurrency problem.
+
+<h2>Sample code</h2>
+
+Now that I've primed you on all the dangers of concurrent access to a
+shared memory segment without using semaphores, I'll show you a demo
+that does just that.  Since this isn't a mission-critical application,
+and it's unlikely that you'll be accessing the shared data at the same
+time as any other process, I'll just leave the semaphores out for the
+sake of simplicity.
+
+<p>
+This program does one of two things: if you run it with no command line
+parameters, it prints the contents of the shared memory segment.  If you
+give it one command line parameter, it stores that parameter in the
+shared memory segment.
+
+<p>
+Here's the code for <a href=shmdemo.c>shmdemo.c</a>:
+
+<p>
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;string.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;sys/ipc.h&gt;
+    #include &lt;sys/shm.h&gt;
+
+    #define SHM_SIZE 1024  /* make it a 1K shared memory segment */
+
+    int main(int argc, char *argv[])
+    {
+        key_t key;
+        int shmid;
+        char *data;
+        int mode;
+
+        if (argc > 2) {
+            fprintf(stderr, "usage: shmdemo [data_to_write]\n");
+            exit(1);
+        }
+
+        /* make the key: */
+        if ((key = ftok("shmdemo.c", 'R')) == -1) {
+            perror("ftok");
+            exit(1);
+        }
+
+        /* connect to (and possibly create) the segment: */
+        if ((shmid = shmget(key, SHM_SIZE, 0644 | IPC_CREAT)) == -1) {
+            perror("shmget");
+            exit(1);
+        }
+
+        /* attach to the segment to get a pointer to it: */
+        data = shmat(shmid, (void *)0, 0);
+        if (data == (char *)(-1)) {
+            perror("shmat");
+            exit(1);
+        }
+
+        /* read or modify the segment, based on the command line: */
+        if (argc == 2) {
+            printf("writing to segment: \"%s\"\n", argv[1]);
+            strncpy(data, argv[1], SHM_SIZE);
+        } else
+            printf("segment contains: \"%s\"\n", data);
+
+        /* detach from the segment: */
+        if (shmdt(data) == -1) {
+            perror("shmdt");
+            exit(1);
+        }
+
+        return 0;
+    }
+</pre>
+
+<p>
+More commonly, a process will attach to the segment and run for a bit
+while other programs are changing and reading the shared segment.  It's
+neat to watch one process update the segment and see the changes appear
+to other processes.  Again, for simplicity, the sample code doesn't do
+that, but you can see how the data is shared between independent
+processes.
+
+<p>
+Also, there's no code in here for removing the segment--be sure to do
+that when you're done messing with it.
+
+<h2>HPUX man pages</h2>
+
+<i>If you don't run HPUX, be sure to check your local man pages!</i>
+
+<ul>
+<li><tt><a href=man.cgi?3+ftok>ftok()</a></tt>
+<li><tt><a href=man.cgi?8+ipcrm>ipcrm</a></tt>
+<li><tt><a href=man.cgi?8+ipcs>ipcs</a></tt>
+<li><tt><a href=man.cgi?2+shmat>shmat()</a></tt>
+<li><tt><a href=man.cgi?2+shmctl>shmctl()</a></tt>
+<li><tt><a href=man.cgi?2+shmdt>shmdt()</a></tt>
+<li><tt><a href=man.cgi?2+shmget>shmget()</a></tt>
+</ul>
+
+<hr>
+<a href=http://www.ecst.csuchico.edu/~beej/guide/ipc/>Back to the IPC main page</a>
+(http://www.ecst.csuchico.edu/~beej/guide/ipc/)
+
+<p>
+
+<small><b>Copyright &copy 1997 by Brian "Beej" Hall.  This guide may be
+reprinted in any medium provided that its content is not altered, it is
+presented in its entirety, and this copyright notice remains
+intact.  Contact <i><a href=mailto:beej@ecst.csuchico.edu>beej@ecst.csuchico.edu</a></i> for
+more information.</b></small>
+
+</body>
+</html>

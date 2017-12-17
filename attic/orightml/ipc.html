@@ -1,0 +1,110 @@
+<html>
+<!--
+TODO:
+	add "common uses" section to each document
+	add file descriptor passing document
+	proofread, read, reread...
+-->
+
+
+<head>
+<title>Beej's Guide to Unix IPC</title>
+</head>
+
+<body>
+<center><h1>Beej's Guide to Unix Interprocess Communication</h1>
+<i>Version 0.9.3 (14-May-1997)</i><br>
+
+<!--
+MIRRORS: please don't change the following link - leave it as a link to
+the original document.  Thanks.
+All the other links can be modified to point to your local site.
+-->
+<small>[<a href="http://beej.us/guide/ipc/">http://beej.us/guide/ipc/</a>]</small></center>
+
+<p>
+
+<hr>
+
+<h2>Intro</h2>
+You know what's easy?  <tt>fork()</tt> is easy.  You can fork off new
+processes all day and have them deal with individual chunks of a problem
+in parallel.  Of course, its easiest if the processes don't have to
+communicate with one another while they're running and can just sit
+there doing their own thing.
+
+<p>
+However, when you start <tt>fork()</tt>'ing processes, you immediately
+start to think of the neat multi-user things you could do if the
+processes could talk to each other easily.  So you try making a global
+array and then <tt>fork()</tt>'ing to see if it is shared.  (That is,
+see if both the child and parent process use the same array.)  Soon, of
+course, you find that the child process has its own copy of the array
+and the parent is oblivious to whatever changes the child makes to it.
+
+<p>
+How do you get these guys to talk to one another, share data structures,
+and be generally amicable?  This document discusses several methods of
+<i>Interprocess Communication</i> (IPC) that can accomplish this, some
+of which are better suited to certain tasks than others.
+
+<hr>
+
+<h2>Audience</h2>
+If you know C or C++ and are pretty good using a Unix environment (or
+other POSIXey environment that supports these system calls) these
+documents are for you.  If you aren't that good, well, don't sweat
+it--you'll be able to figure it out.  I make the assumption, however,
+that you have a fair smattering of C programming experience.
+
+<p>
+As with <a href=http://www.ecst.csuchico.edu/~beej/guide/net/>Beej's
+Guide to Network Programming Using Internet Sockets</a>, these documents
+are meant to springboard the aforementioned user into the realm of IPC
+by delivering a concise overview of various IPC techniques.  This is not
+the definitive set of documents that cover this subject, by any means.
+Like I said, it is designed to simply give you a foothold in this, the
+exciting world of IPC.
+
+<hr>
+
+<h2>Platform and Compiler</h2>
+The examples in this document were compiled under Linux using
+<tt>gcc</tt>.  They have also been known to compile under HPUX 10.10
+using <tt>cc -Ae</tt>.  The programs are fairly ANSI compliant, and
+should compile on just about any platform for which a good ANSI C
+compiler is available.
+
+<hr>
+
+<h2>Specific Documents:</h2>
+<ul>
+<li><b><a href=fork.html>A <tt>fork()</tt> primer</a></b>
+<li><b><a href=signals.html>Signals</a></b>
+<li><b><a href=pipes.html>Pipes</a></b>
+<li><b><a href=fifos.html>FIFOs (Named Pipes)</a></b>
+<li><b><a href=flock.html>File locking</a></b>
+<li>System V IPC (<i>which works on most Unix flavors, anyway...</i>)
+<ul>
+<li><b><a href=mq.html>Message Queues</a></b>
+<li><b><a href=semaphores.html>Semaphores</a></b>
+<li><b><a href=shmem.html>Shared Memory</a></b>
+</ul>
+<li><b><a href=mmap.html>Memory Mapped Files</a></b>
+<li><b><a href=usock.html>Unix Sockets</a></b>
+<li><b><a href=resources.html>More resources</a></b>
+</ul>
+
+<hr>
+
+<small><b>Copyright &copy 1997 by Brian "Beej" Hall.  This guide may be
+reprinted in any medium provided that its content is not altered, it is
+presented in its entirety, and this copyright notice remains intact.
+Any source code presented in this guide is hereby granted to the public
+domain.  Contact <i><a
+href=mailto:beej@ecst.csuchico.edu>beej@ecst.csuchico.edu</a></i> for
+more information.</b></small>
+
+</body>
+</html>
+

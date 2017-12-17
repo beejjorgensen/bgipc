@@ -1,0 +1,261 @@
+<html>
+<head>
+<title>A fork() Primer</title>
+</head>
+
+<body>
+<h1>A <tt>fork()</tt> Primer</h1>
+"Fork", aside from being one of those words that begins to appear very
+strange after you've typed it repeatedly, refers to the way Unix creates
+new processes.  This document gives a quick and dirty <tt>fork()</tt>
+primer, since use of that system call will pop up in other IPC
+documents.  If you already know all about <tt>fork()</tt>, you might as
+well skip this document.
+
+<h2>"Seek ye the Gorge of Eternal Peril"</h2>
+
+<p>
+<tt>fork()</tt> can be thought of as a ticket to power.  Power can
+sometimes be thought of as a ticket to destruction.  Therefore, you
+should be careful while messing with <tt>fork()</tt> on your system,
+especially while people are cranking their nearly-late semester
+projects and are ready to nuke the first organism that brings the system
+to a halt.  It's not that you should never play with <tt>fork()</tt>,
+you just have to be cautious.  It's kind of like sword-swallowing; if
+you're careful, you won't disembowel yourself.
+
+<p>
+Since you're still here, I suppose I'd better deliver the goods.
+Like I said, <tt>fork()</tt> is how Unix starts new processes.
+Basically, how it works is this: the parent process (the one that
+already exists) <tt>fork()</tt>'s a child process (the new one).  The
+child process gets a <b>copy</b> of the parent's data.  <I>Voila!</i>
+You have two processes where there was only one!
+
+<p>
+Of course, there are all kinds of gotchas you must deal with when
+<tt>fork()</tt>ing processes or else your sysadmin will get irate with
+you when you fill of the system process table and they have to punch the
+reset button on the machine.
+
+<p>
+First of all, you should know something of process behavior under Unix.
+When a process dies, it doesn't really go away completely.  It's dead,
+so it's no longer running, but a small remnant is waiting around for the
+parent process to pick up.  This remnant contains the return value from
+the child process and some other goop.  So after a parent process
+<tt>fork()</tt>s a child process, it must <tt>wait()</tt> (or
+<tt>waitpid()</tt>) for that child process to exit.  It is this act of
+<tt>wait()</tt>ing that allows all remnants of the child to vanish.
+
+<p>
+Naturally, there is an exception to the above rule: the parent can
+ignore the <tt>SIGCLD</tt> signal and then it won't have to
+<tt>wait()</tt>.  This can be done (on systems that support it) like this:
+
+<pre>
+    main()
+    {
+        signal(SIGCLD, SIG_IGN);  /* now I don't have to wait()! */
+        .
+        .
+        fork();fork();fork();  /* Rabbits, rabbits, rabbits! */
+</pre>
+
+<p>
+Now, when a child process dies and has not been <tt>wait()</tt>ed on, it
+will usually show up in a <tt>ps</tt> listing as
+"<tt>&lt;defunct&gt;</tt>".  It will remain this way until the parent
+<tt>wait()</tt>s on it, or it is dealt with as mentioned below.
+
+<p>
+Now there is another rule you must learn: when the parent dies
+before it <tt>wait()</tt>s for the child (assuming it is not ignoring
+<tt>SIGCLD</tt>), the child is reparented to the <i>init</i> process
+(PID 1).  This is not a problem if the child is still living well and
+under control.  However, if the child is already defunct, we're in a bit
+of a bind.  See, the original parent can no longer <tt>wait()</tt>,
+since it's dead.  So how does <tt>init</tt> know to <tt>wait()</tt> for
+these <i>zombie processes</i>?
+
+<p>
+The answer: it's magic!  Well, on some systems, <tt>init</tt>
+periodically destroys all the defunct processes it owns.  On other
+systems, it outright refuses to become the parent of any defunct
+processes, instead destroying them immediately.  If you're using one of
+the former systems, you could easily write a loop that fills up the
+process table with defunct processes owned by <tt>init</tt>.  Wouldn't
+that make your sysadmin happy?
+
+<p>
+Your mission: make sure your parent process either ignores
+<tt>SIGCLD</tt>, or <tt>wait()</tt>s for all the children it
+<tt>fork()</tt>s.  Well, you don't <i>always</i> have to do that (like
+if you're starting a daemon or something), but you code with caution if
+you're a <tt>fork()</tt> novice.  Otherwise, feel free to blast off into
+the stratosphere.
+
+<p>To summerize: children become defunct until the parent
+<tt>wait()</tt>s, unless the parent is ignoring <tt>SIGCLD</tt>.
+Furthermore, children (living or defunct) whose parents die without
+<tt>wait()</tt>ing for them (again assuming the parent is not ignoring
+<tt>SIGCLD</tt>) become children of the <tt>init</tt> process, which
+deals with them heavy-handedly.
+
+<h2>"I'm mentally prepared!  Give me <font color=#ff0000>The
+Button</font>!"</h2>
+
+Right!  Here's an <a href=fork1.c>example</a> of how to use <tt>fork()</tt>:
+
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;errno.h&gt;
+    #include &lt;unistd.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;sys/wait.h&gt;
+
+    main()
+    {
+        pid_t pid;
+        int rv;
+
+        switch(pid=fork()) {
+            case -1:
+                perror("fork");  /* something went wrong */
+                exit(1);         /* parent exits */
+
+            case 0:
+                printf(" CHILD: This is the child process!\n");
+                printf(" CHILD: My PID is %d\n", getpid());
+                printf(" CHILD: My parent's PID is %d\n", getppid());
+                printf(" CHILD: Enter my exit status (make it small): ");
+                scanf(" %d", &rv);
+                printf(" CHILD: I'm outta here!\n");
+                exit(rv);
+
+            default:
+                printf("PARENT: This is the parent process!\n");
+                printf("PARENT: My PID is %d\n", getpid());
+                printf("PARENT: My child's PID is %d\n", pid);
+                printf("PARENT: I'm now waiting for my child to exit()...\n");
+                wait(&rv);
+                printf("PARENT: My child's exit status is: %d\n", WEXITSTATUS(rv));
+                printf("PARENT: I'm outta here!\n");
+        }
+    }
+
+</pre>
+
+There is a ton of stuff to note from this example, so we'll just start
+from the top, shall we?
+
+<p>
+<tt>pid_t</tt> is the generic process type.  Under Unix, this is a
+<tt>short</tt>.  So, I call <tt>fork()</tt> and save the return value
+in the <tt>pid</tt> variable.  <tt>fork()</tt> is easy, since it can
+only return three things:
+
+<p>
+<dl compact>
+<dt><tt><b>0:</b></tt>
+<dd>If it returns <tt>0</tt>, you are the child process.  You can get
+the parent's PID by calling <tt>getppid()</tt>.  Of course, you can get
+your own PID by calling <tt>getpid()</tt>.
+<p>
+<dt><tt><b>-1:</b></tt>
+<dd>If it returns <tt>-1</tt>, something went wrong, and no child was
+created.  Use <tt>perror()</tt> to see what happened.  You've probably
+filled the process table--if you turn around you'll see your sysadmin
+coming at you with a fireaxe.
+<p>
+<dt><tt><b><i>else:</i></b></tt>
+<dd>Any other value returned by <tt>fork()</tt> means that you're the
+parent and the value returned is the PID of your child.  This is the
+only way to get the PID of your child, since there is no
+<tt>getcpid()</tt> call (obviously due to the one-to-many relationship
+between parents and children.)
+</dl>
+
+<p>
+When the child finally calls <tt>exit()</tt>, the return value passed
+will arrive at the parent when it <tt>wait()</tt>s.  As you can see from
+the <tt>wait()</tt> call, there's some weirdness coming into play when
+we print the return value.  What's this <tt>WEXITSTATUS()</tt> stuff,
+anyway?  Well, that is a macro that extracts the child's actual return
+value from the value <tt>wait()</tt> returns.  Yes, there is more
+information buried in that <tt>int</tt>.  I'll let you look it up on
+your own.
+
+<p>
+"How," you ask, "does <tt>wait()</tt> know which process to wait for?  I
+mean, since the parent can have multiple children, which one does
+<tt>wait()</tt> actually wait for?"  The answer is simple, my friends:
+it waits for whichever one happens to exit first.  If you must, you can
+specify exactly which child to wait for by calling <tt>waitpid()</tt>
+with your child's PID as an argument.
+
+<p>
+Another interesting thing to note from the above example is that both
+parent and child use the <tt>rv</tt> variable.  Does this mean that it
+is shared between the processes?  <b>NO!</b>  If it was, I wouldn't have
+written all this IPC stuff.  <i>Each process has its own copy of all
+variables.</i>  There is a lot of other stuff that is copied, too, but
+you'll have to read the <tt>man</tt> page to see what.
+
+<p>
+A final note about the above program: I used a switch statement to
+handle the <tt>fork()</tt>, and that's not exactly typical.  Most often
+you'll see an <tt>if</tt> statement there; sometimes it's as short as:
+
+<pre>
+    if (!fork()) {
+        printf("I'm the child!\n");
+        exit(0);
+    } else {
+        printf("I'm the parent!\n");
+        wait(NULL);
+    }
+</pre>
+
+Oh yeah--the above example also demonstrates how to <tt>wait()</tt> if
+you don't care what the return value of the child is: you just call it
+with <tt>NULL</tt> as the argument.
+
+<h2>Conclusions</h2>
+
+Now you know all about the mighty <tt>fork()</tt> function!  It's more
+useful that a wet bag of worms in most computationally intensive
+situations, and you can amaze your friends at parties.  Additionally,
+it can help make you more attractive to members of the opposite sex,
+unless you're male.
+
+
+<h2>Linux man pages</h2>
+
+<i>If you don't run Linux, be sure to check your local man pages!</i>
+
+<ul>
+<li><tt><a href=man.cgi?2+exit>exit()</a></tt>
+<li><tt><a href=man.cgi?2+fork>fork()</a></tt>
+<li><tt><a href=man.cgi?1+ps>ps</a></tt>
+<li><tt><a href=man.cgi?2+signal>signal()</a></tt>
+<li><tt><a href=man.cgi?7+signal>signal listing</a></tt>
+<li><tt><a href=man.cgi?2+wait>wait()</a></tt>
+<li><tt><a href=man.cgi?2+waitpid>waitpid()</a></tt>
+</ul>
+
+<hr>
+<a href=http://www.ecst.csuchico.edu/~beej/guide/ipc/>Back to the IPC main page</a>
+(http://www.ecst.csuchico.edu/~beej/guide/ipc/)
+
+<p>
+
+<small><b>Copyright &copy 1997 by Brian "Beej" Hall.  This guide may be
+reprinted in any medium provided that its content is not altered, it is
+presented in its entirety, and this copyright notice remains
+intact.  Contact <i><a href=mailto:beej@ecst.csuchico.edu>beej@ecst.csuchico.edu</a></i> for
+more information.</b></small>
+
+</body>
+</html>

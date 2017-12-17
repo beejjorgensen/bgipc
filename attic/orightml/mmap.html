@@ -1,0 +1,296 @@
+<html>
+<head>
+<title>Memory Mapped Files</title>
+</head>
+
+<body>
+<h1>Memory Mapped Files</h1>
+
+There comes a time when you want to read and write to and from files so
+that the information is shared between processes.  Think of it this way:
+two processes both open the same file and both read and write from it,
+thus sharing the information.  The problem is, sometimes it's a pain to
+do all those <tt>fseek()</tt>s and stuff to get around.  Wouldn't it be
+easier if you could just map a section of the file to memory, and get
+a pointer to it?  Then you could simply use pointer arithmetic to get
+(and set) data in the file.
+
+<p>
+Well, this is exactly what a memory mapped file is.  And it's really
+easy to use, too.  A few simple calls, mixed with a few simple rules,
+and you're mapping like a mad-person.
+ 
+<h2>Mapmaker</h2>
+
+Before mapping a file to memory, you need to get a file descriptor for
+it by using the <tt>open()</tt> system call:
+
+<p>
+<pre>
+    int fd;
+
+    fd = open("mapdemofile", O_RDWR);
+</pre>
+
+<p>
+In this example, we've opened the file for read/write access.  You can
+open it in whatever mode you want, but it has to match the mode
+specified in the <tt><i>prot</i></tt> parameter to the <tt>mmap()</tt>
+call, below.
+
+<p>
+To memory map a file, you use the <tt>mmap()</tt> system call, which is
+defined as follows:
+
+<p>
+<pre>
+    void *mmap(void *<i>addr</i>, size_t <i>len</i>, int <i>prot</i>, int <i>flags</i>,
+               int <i>fildes</i>, off_t <i>off</i>);
+</pre>
+
+<p>
+What a slew of parameters!  Here they are, one at a time:
+
+<p>
+<dl compact>
+<dt><b><i>addr</i></b>
+<dd>This is the address we want the file mapped into.  The best way to
+use this is to set it to <tt><nobr>(caddr_t)0</nobr></tt> and let the OS
+choose it for you.  If you tell it to use an address the OS doesn't
+like (for instance, if it's not a multiple of the virtual memory page
+size), it'll give you an error.
+<p>
+
+<dt><b><i>len</i></b>
+<dd>This parameter is the length of the data we want to map into memory.
+This can be any length you want.  (Aside: if <tt><i>len</i></tt> not a
+multiple of the virtual memory page size, you will get a blocksize that
+is rounded up to that size.  The extra bytes will be 0, and any changes
+you make to them will not modify the file.)
+<p>
+
+<dt><b><i>prot</i></b>
+<dd>The "protection" argument allows you to specify what kind of access
+this process has to the memory mapped region.  This can be a bitwise-ORd
+mixture of the following values: <tt>PROT_READ</tt>,
+<tt>PROT_WRITE</tt>, and <tt>PROT_EXEC</tt>, for read, write, and
+execute permissions, respectively.  The value specified here must be
+equivalent to the mode specified in the <tt>open()</tt> system call that
+is used to get the file descriptor.
+<p>
+
+<dt><b><i>flags</i></b>
+<dd>There are just miscellaneous flags that can be set for the system
+call.  You'll want to set it to <tt>MAP_SHARED</tt> if you're planning
+to share your changes to the file with other processes, or
+<tt>MAP_PRIVATE</tt> otherwise.  If you set it to the latter, your
+process will get a copy of the mapped region, so any changes you make to
+it will not be reflected in the original file--thus, other processes
+will not be able to see them.  We won't talk about <tt>MAP_PRIVATE</tt>
+here at all, since it doesn't have much to do with IPC.
+<p>
+
+<dt><b><i>fildes</i></b>
+<dd>This is where you put that file descriptor you opened earlier.
+<p>
+
+<dt><b><i>off</i></b>
+<dd>This is the offset in the file that you want to start mapping from.
+A restriction: this <b>must</b> be a multiple of the virtual memory page
+size.  This page size can be obtained with a call to
+<tt>getpagesize()</tt>.
+</dl>
+
+<p>
+As for return values, as you might have guessed, <tt>mmap()</tt> returns
+<tt>-1</tt> on error, and sets <tt>errno</tt>.  Otherwise, it returns a
+pointer to the start of the mapped data.
+
+<p>
+Anyway, without any further ado, we'll do a short demo that maps the
+second "page" of a file into memory.  First we'll <tt>open()</tt> it to
+get the file descriptor, then we'll use <tt>getpagesize()</tt> to get
+the size of a virtual memory page and use this value for both the
+<tt><i>len</i></tt> and the <tt><i>off</i></tt>.  In this way, we'll
+start mapping at the second page, and map for one page's length.  (On my
+Linux box, the page size is 4K.)
+
+<p>
+<pre>
+    #include &lt;unistd.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;sys/mman.h&gt;
+
+    int fd, pagesize;
+    char *data;
+
+    fd = fopen("foo", O_RDONLY);
+    pagesize = getpagesize();
+    data = mmap((caddr_t)0, pagesize, PROT_READ, MAP_SHARED, fd, pagesize);
+</pre>
+  
+<p>
+Once this code stretch has run, you can access the first byte of the
+mapped section of file using <tt>data[0]</tt>.  Notice there's a lot of
+type conversion going on here.  For instance, <tt>mmap()</tt> returns
+<tt>caddr_t</tt>, but we treat it as a <tt>char*</tt>.  Well, the fact is
+that <tt>caddr_t</tt> usually is defined to be a <tt>char*</tt>, so
+everything's fine.
+
+<p>
+Also notice that we've mapped the file <tt>PROT_READ</tt> so we have
+read-only access.  Any attempt to write to the data (<tt><nobr>data[0] =
+'B'</nobr></tt>, for example) will cause a segmentation violation.
+Open the file <tt>O_RDWR</tt> with <tt><i>prot</i></tt> set to
+<tt>PROT_READ|PROT_WRITE</tt> if you want read-write access to the data.
+
+<p>
+
+<h2>Unmapping the file</h2>
+
+There is, of course, a <tt>munmap()</tt> function to un-memory map a
+file:
+
+<p>
+<pre>
+    int munmap(caddr_t <i>addr</i>, size_t <i>len</i>);
+</pre>
+
+<p>
+This simply unmaps the region pointed to by <tt><i>addr</i></tt>
+(returned from <tt>mmap()</tt>) with length <tt><i>len</i></tt> (same as
+the <tt><i>len</i></tt> passed to <tt>mmap()</tt>).  <tt>munmap()</tt>
+returns <tt>-1</tt> on error and sets the <tt>errno</tt> variable.
+
+<p>
+Once you've unmapped a file, any attempts to access the data through the
+old pointer will result in a segmentation fault.  You have been warned!
+
+<p>
+A final note: the file will automatically unmap if your program exits,
+of course.
+
+<h2>Concurrency, again?!</h2>
+
+If you have multiple processes manipulating the data in the same file
+concurrently, you could be in for troubles.  You might have to <a
+href=flock.html>lock the file</a> or use <a
+href=semaphores.html>semaphores</a> to regulate access to the file while
+a process messes with it.  Look at the <a href=shmem.html#con>Shared
+Memory</a> document for a (very little bit) more concurrency information.
+
+
+<h2>A simple sample</h2>
+
+Well, it's code time again.  I've got here a demo program that maps its
+own source to memory and prints the byte that's found at whatever offset
+you specify on the command line.
+
+<p>
+The program restricts the offsets you can specify to the range 0 through
+the file length.  The file length is obtained through a call to
+<tt>stat()</tt> which you might not have seen before.  It returns a
+structure full of file info, one field of which is the size in bytes.
+Easy enough.
+
+<p>
+Here is the source for <tt><a href=mmapdemo.c>mmapdemo.c</a></tt>:
+
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;fcntl.h&gt;
+    #include &lt;unistd.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;sys/mman.h&gt;
+    #include &lt;sys/stat.h&gt;
+    #include &lt;errno.h&gt;
+
+    int main(int argc, char *argv[])
+    {
+        int fd, offset;
+        char *data;
+        struct stat sbuf;
+
+        if (argc != 2) {
+            fprintf(stderr, "usage: mmapdemo offset\n");
+            exit(1);
+        }
+
+        if ((fd = open("mmapdemo.c", O_RDONLY)) == -1) {
+            perror("open");
+            exit(1);
+        }
+
+        if (stat("mmapdemo.c", &sbuf) == -1) {
+            perror("stat");
+            exit(1);
+        }
+
+        offset = atoi(argv[1]);
+        if (offset &lt; 0 || offset &gt; sbuf.st_size-1) {
+            fprintf(stderr, "mmapdemo: offset must be in the range 0-%d\n", \
+                                                               sbuf.st_size-1);
+            exit(1);
+        }
+        
+        if ((data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, \
+                                                    fd, 0)) == (caddr_t)(-1)) {
+            perror("mmap");
+            exit(1);
+        }
+
+        printf("byte at offset %d is '%c'\n", offset, data[offset]);
+
+        return 0;
+    }
+</pre>
+
+<p>
+That's all there is to it.  Compile that sucker up and run it with some
+command line like:
+
+<p>
+<pre>
+    $ mmapdemo 30
+    byte at offset 30 is 'e'
+</pre>
+
+<p>
+I'll leave it up to you to write some really cool programs using this
+system call. 
+
+<h2>Conclusions</h2>
+
+Memory mapped files can be very useful, especially on systems that don't
+support shared memory segments.  In fact, the two are very similar in
+most respects.  (Memory mapped files are committed to disk, too, so this
+could even be an advantage, yes?)  With file locking or semaphores, data
+in a memory mapped file can easily be shared between multiple processes.
+
+<h2>Linux man pages</h2>
+
+<i>If you don't run Linux, be sure to check your local man pages!</i>
+
+<ul>
+<li><tt><a href=man.cgi?2+getpagesize>getpagesize()</a></tt>
+<li><tt><a href=man.cgi?2+mmap>mmap()</a></tt>
+<li><tt><a href=man.cgi?2+munmap>munmap()</a></tt>
+<li><tt><a href=man.cgi?2+open>open()</a></tt>
+<li><tt><a href=man.cgi?2+stat>stat()</a></tt>
+</ul>
+
+<hr>
+<a href=http://www.ecst.csuchico.edu/~beej/guide/ipc/>Back to the IPC main page</a>
+(http://www.ecst.csuchico.edu/~beej/guide/ipc/)
+
+<p>
+
+<small><b>Copyright &copy 1997 by Brian "Beej" Hall.  This guide may be
+reprinted in any medium provided that its content is not altered, it is
+presented in its entirety, and this copyright notice remains
+intact.  Contact <i><a href=mailto:beej@ecst.csuchico.edu>beej@ecst.csuchico.edu</a></i> for
+more information.</b></small>
+
+</body>
+</html>

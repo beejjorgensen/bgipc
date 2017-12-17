@@ -1,0 +1,257 @@
+<html>
+<head>
+<title>Pipes</title>
+</head>
+
+<body>
+<h1>Pipes</h1>
+There is no form of IPC that is simpler than pipes.  Implemented on
+every flavor of Unix, <tt>pipe()</tt> and <tt><a
+href=fork.html>fork()</a></tt> make up the functionality behind the
+"<tt>|</tt>" in "<tt>ls | more</tt>".  They are marginally useful for
+cool things, but are a good way to learn about basic methods of IPC.
+
+<p>
+Since they're so very very easy, I shant spent much time on them.  We'll
+just have some examples and stuff.
+
+<h2>"These pipes are clean!"</h2>
+
+Wait!  Not so fast.  I might need to define a "file descriptor" at this
+point.  Let me put it this way: you know about "<nobr><tt>FILE
+*</tt></nobr>" from <tt>stdio.h</tt>, right?  You know how you have all
+those nice functions like <tt>fopen()</tt>, <tt>fclose()</tt>,
+<tt>fwrite()</tt>, and so on?  Well, those  are actually high level
+functions that are implemented using <t>file descriptors</i>, which use
+system calls such as <tt>open()</tt>, <tt>creat()</tt>,
+<tt>close()</tt>, and <tt>write()</tt>.  File descriptors are simply
+<tt>ints</tt> that are analogous to <nobr><tt>FILE *</tt>'s</nobr> in
+<tt>stdio.h</tt>.
+
+<p>
+For example, <tt>stdin</tt> is file descriptor "0", <tt>stdout</tt> is
+"1", and <tt>stderr</tt> is "2".  Likewise, any files you open using
+<tt>fopen()</tt> get their own file descriptor, although this detail is
+hidden from you.  (This file descriptor can be retrived from the
+<nobr><tt>FILE *</tt></nobr> by using the <tt>fileno()</tt> macro from
+<tt>stdio.h</tt>.)
+
+<p>
+<center>
+<a href=pipe1.gif>
+<img src=pipe1.gif alt="[pipe diagram 1]" border=0></a>
+<br>
+<b>Figure 1.  How a pipe is organized.</b>
+</center>
+
+<p>
+Basically, a call to the <tt>pipe()</tt> function returns a pair of file
+descriptors.  One of these descriptors is connected to the write end of
+the pipe, and the other is connected to the read end.  Anything can be
+written to the pipe, and read from the other end in the order it came
+in.  On many systems, pipes will fill up after you write about 10K to
+them without reading anything out.
+
+<p>
+As a <a href=pipe1.c>useless example</a>, the following program creates,
+writes to, and reads from a pipe.
+
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;errno.h&gt;
+    #include &lt;unistd.h&gt;
+    
+    int main()
+    {
+        int pfds[2];
+        char buf[30];
+    
+        if (pipe(pfds) == -1) {
+            perror("pipe");
+            exit(1);
+        }
+    
+        printf("writing to file descriptor #%d\n", pfds[1]);
+        write(pfds[1], "test", 5);
+        printf("reading from file descriptor #%d\n", pfds[0]);
+        read(pfds[0], buf, 5);
+        printf("read \"%s\"\n", buf);
+    }
+</pre>
+
+<p>
+As you can see, <tt>pipe()</tt> takes an array of two <tt>int</tt>s as
+an argument.  Assuming no errors, it connects two file descriptors and
+returns them in the array.  The first element of the array is the
+reading-end of the pipe, the second is the writing end.
+
+<h2><tt>fork()</tt> and <tt>pipe()</tt>--you have the power!</h2>
+<p>
+From the above example, it's pretty hard to see how these would even be
+useful.  Well, since this is an IPC document, let's put a
+<tt>fork()</tt> in the mix and see what happens.  Pretend that you are a
+top federal agent assigned to get a child process to send the word
+"test" to the parent.  Not very glamorous, but no one ever said computer
+science would be the X-Files, Mulder.
+
+<p>
+First, we'll have the parent make a pipe.  Secondly, we'll
+<tt>fork()</tt>.  Now, the <tt>fork()</tt> man page tells us that the
+child will receive a copy of all the parent's file descriptors, and this
+includes a copy of the pipe's file descriptors.  <i>Alors</i>, the child
+will be able to send stuff to the write-end of the pipe, and the parent
+will get it off the read-end.  <a href=pipe2.c>Like this</a>:
+
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;unistd.h&gt;
+
+    int main()
+    {
+        int pfds[2];
+        char buf[30];
+
+        pipe(pfds);
+
+        if (!fork()) {
+            printf(" CHILD: writing to the pipe\n");
+            write(pfds[1], "test", 5);
+            printf(" CHILD: exiting\n");
+            exit(0);
+        } else {
+            printf("PARENT: reading from pipe\n");
+            read(pfds[0], buf, 5);
+            printf("PARENT: read \"%s\"\n", buf);
+            wait(NULL);
+        }
+    }
+</pre>
+
+<p>
+Please note, your programs should have a lot more error checking than
+mine do.  I leave it out on occasion to help keep things clear.  
+
+<p>
+Anyway, this example is just like the previous one, except now we
+<tt>fork()</tt> of a new process and have it write to the pipe, while
+the parent reads from it.  The resultant output will be something
+similar to the following:
+
+<pre>
+    PARENT: reading from pipe
+     CHILD: writing to the pipe
+     CHILD: exiting
+    PARENT: read "test"
+</pre>
+
+<p>
+In this case, the parent tried to read from the pipe before the child
+writes to it.  When this happens, the parent is said to <i>block</i>, or
+sleep, until data arrives to be read.  It seems that the parent tried to
+read, went to sleep, the child wrote and exited, and the parent woke up
+and read the data.
+
+<p>
+Hurrah!!  You've just don't some interprocess communication!  That was
+dreadfully simple, huh?  I'll bet you are still thinking that there
+aren't many uses for <tt>pipe()</tt> and, well, you're probably right.
+The other forms of IPC are generally more useful and are often more
+exotic.
+
+<h2>The search for Pipe as we know it</h2>
+<p>
+In an effort to make you think that pipes are actually reasonable
+beasts, I'll give you an example of using <tt>pipe()</tt> in a more
+familiar situation.  The challenge: implement "<nobr><tt>ls | wc
+-l</tt></nobr>" in C.
+
+<p>
+This requires usage of a couple more functions you may never have heard
+of: <tt>exec()</tt> and <tt>dup()</tt>.  The <tt>exec()</tt> family of
+functions replaces the currently running process with whichever one is
+passed to <tt>exec()</tt>.  This is the function that we will use to run
+<tt>ls</tt> and <nobr><tt>wc -l</tt></nobr>.  <tt>dup()</tt> takes an
+open file descriptor and makes a clone (a duplicate) of it.  This is how
+we will connect the standard output of the <tt>ls</tt> to the standard
+input of <tt>wc</tt>.  See, stdout of <tt>ls</tt> flows into the pipe,
+and the stdin of <tt>wc</tt> flows in from the pipe.  The pipe fits
+right there in the middle!
+
+<p>
+Anyway, <a href=pipe3.c>here is the code</a>:
+
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;unistd.h&gt;
+
+    int main()
+    {
+        int pfds[2];
+
+        pipe(pfds);
+
+        if (!fork()) {
+            close(1);       /* close normal stdout */
+            dup(pfds[1]);   /* make stdout same as pfds[1] */
+            close(pfds[0]); /* we don't need this */
+            execlp("ls", "ls", NULL);
+        } else {
+            close(0);       /* close normal stdin */
+            dup(pfds[0]);   /* make stdin same as pfds[0] */
+            close(pfds[1]); /* we don't need this */
+            execlp("wc", "wc", "-l", NULL);
+        }
+    }
+</pre>
+
+<p>
+I'm going to make another note about the <tt>close()</tt>/<tt>dup()</tt>
+combination since it's pretty weird.  <tt>close(1)</tt> frees up file
+descriptor 1 (standard output).  <tt>dup(pfds[1])</tt> makes a copy of
+the write-end of the pipe in the first available file descriptor, which
+is "1", since we just closed that.  In this way, anything that
+<tt>ls</tt> writes to standard output (file descriptor 1) will instead
+go to <tt>pfds[1]</tt> (the write end of the pipe).  The <tt>wc</tt>
+section of code works the same way, except in reverse.
+
+<p>
+<h2>Conclusions</h2>
+There aren't many of these for such a simple topic.  In fact, there are
+nearly just about none.  Probably the best use for pipes is the one
+you're most accustomed to: sending the standard output of one command to
+the standard input of another.  For other uses, it's pretty limiting and
+there are often other IPC techniques that work better.
+
+<p>
+<h2>Linux man pages</h2>
+
+<i>If you don't run Linux, be sure to check your local man pages!</i>
+
+<ul>
+<li><tt><a href=man.cgi?2+dup>dup()</a></tt>
+<li><tt><a href=man.cgi?2+exec>exec()</a></tt>
+<li><tt><a href=man.cgi?3+fileno>fileno()</a></tt>
+<li><tt><a href=man.cgi?2+fork>fork()</a></tt>
+<li><tt><a href=man.cgi?2+pipe>pipe()</a></tt>
+<li><tt><a href=man.cgi?2+read>read()</a></tt>
+<li><tt><a href=man.cgi?2+write>write()</a></tt>
+</ul>
+
+<hr>
+<a href=http://www.ecst.csuchico.edu/~beej/guide/ipc/>Back to the IPC main page</a>
+(http://www.ecst.csuchico.edu/~beej/guide/ipc/)
+
+<p>
+
+<small><b>Copyright &copy 1997 by Brian "Beej" Hall.  This guide may be
+reprinted in any medium provided that its content is not altered, it is
+presented in its entirety, and this copyright notice remains
+intact.  Contact <i><a href=mailto:beej@ecst.csuchico.edu>beej@ecst.csuchico.edu</a></i> for
+more information.</b></small>
+
+</body>
+</html>

@@ -1,0 +1,467 @@
+<html>
+<head>
+<title>Unix Sockets</title>
+</head>
+
+<body>
+<h1>Unix Sockets</h1>
+
+Remember <a href=fifos.html>FIFOs</a>?  Remember how they can only send
+data in one direction, just like a <a href=pipes.html>Pipes</a>?
+Wouldn't it be grand if you could send data in both directions like you
+can with a socket?
+
+<p>
+Well, hope no longer, because the answer is here: Unix Domain Sockets!
+In case you're still wondering what a socket is, well, it's a two-way
+communications pipe, which can be used to communicate in a wide variety
+of <i>domains</i>.  One of the most common domains sockets communicate
+over is the Internet, but we won't discuss that here.  We will, however,
+be talking about sockets in the Unix domain; that is, sockets that can
+be used between processes on the same Unix system.
+
+<p>
+Unix sockets use many of the same function calls that Internet sockets
+do, and I won't be describing all of the calls I use in detail within
+this document.  If the description of a certain call is too vague (or if
+you just want to learn more about Internet sockets anyway), please see
+<a href=../net/>Beej's Guide to Network Programming Using Internet
+Sockets</a> for more detailed information.
+
+<h2>Overview</h2>
+
+Like I said before, Unix sockets are just like two-way FIFOs.  However,
+all data communication will be taking place through the sockets
+interface, instead of through the file interface.  Although
+Unix sockets are a special file in the file system (just like FIFOs),
+you won't be using <tt>open()</tt> and <tt>read()</tt>--you'll be using
+<tt>socket()</tt>, <tt>bind()</tt>, <tt>recv()</tt>, etc.
+
+<p>
+When programming with sockets, you'll usually create server and client
+programs.  The server will sit listening for incoming connections from
+clients and handle them.  This is very similar to the situation that
+exists with Internet sockets, but with some fine differences.
+
+<p>
+For instance, when describing which Unix socket you want to use (that
+is, the path to the special file that is the socket), you use a
+<tt><nobr>struct sockaddr_un</nobr></tt>, which has the following
+fields:
+
+<p>
+<pre>
+    struct sockaddr_un {
+        unsigned short sun_family;  /* AF_UNIX */
+        char sun_path[108];
+    }
+</pre>
+
+<p>
+This is the structure you will be passing to the <tt>bind()</tt>
+function, which associates a socket descriptor (a file descriptor) with
+a certain file (the name for which is in the <tt>sun_path</tt> field).
+
+<h2>What to do to be a Server</h2>
+
+Without going into too much detail, I'll outline the steps a server
+program usually has to go through to do it's thing.  While I'm at it,
+I'll be trying to implement an "echo server" which just echos back
+everything it gets on the socket.
+
+<p>
+Here are the server steps:
+
+<ol>
+<li><b>Call <tt>socket()</tt>:</b>  A call to <tt>socket()</tt> with the
+proper arguments creates the Unix socket:
+
+<p>
+<pre>
+    unsigned int s, s2;
+    struct sockaddr_un local, remote;
+    int len;
+
+    s = socket(AF_UNIX, SOCK_STREAM, 0);
+</pre>
+
+<p>
+The second argument, <tt>SOCK_STREAM</tt>, tells <tt>socket()</tt> to
+create a stream socket.  Yes, datagram sockets (<tt>SOCK_DGRAM</tt>) are
+supported in the Unix domain, but I'm only going to cover stream sockets
+here.  For the curious, see <a href=../net/>Beej's Guide to Network
+Programming</a> for a good description of unconnected datagram sockets
+that applies perfectly well to Unix sockets.  The only thing that
+changes is that you're now using a <tt><nobr>struct
+sockaddr_<b>un</b></nobr></tt> instead of a <tt><nobr>struct
+sockaddr_<b>in</b></nobr></tt>.
+
+<p>
+One more note: all these calls return <tt>-1</tt> on error and set the
+global variable <tt>errno</tt> to reflect whatever went wrong.  Be sure
+to do you error checking.
+
+<p>
+<li><b>Call <tt>bind()</tt>:</b>  You got a socket descriptor from the
+call to <tt>socket()</tt>, now you want to bind that to an address in
+the Unix domain.  (That address, as I said before, is a special file on
+disk.)
+
+<p>
+<pre>
+    local.sun_family = AF_UNIX;  /* local is declared before socket() ^ */
+    local.sun_path = "/home/beej/mysocket";
+    unlink(local.sun_path);
+    len = strlen(local.sun_path) + sizeof(local.sun_family);
+    bind(s, (struct sockaddr *)&local, len);
+</pre>
+
+<p>
+This associates the socket descriptor "<tt>s</tt>" with the Unix socket
+address "<tt>/home/beej/mysocket</tt>".  Notice that we called
+<tt>unlink()</tt> before <tt>bind()</tt> to remove the socket if it
+already exists.  You will get an <tt>EINVAL</tt> error if the file
+is already there.
+
+<p>
+<li><b>Call <tt>listen()</tt>:</b>  This instructs the socket to listen
+for incoming connections from client programs:
+
+<p>
+<pre>
+    listen(s, 5);
+</pre>
+
+<p>
+The second argument, <tt>5</tt>, is the number of incoming connections
+that can be queued before you call <tt>accept()</tt>, below.  If there
+are this many connections waiting to be accepted, additional clients
+will generate the error <tt>ECONNREFUSED</tt>.
+
+<p>
+<li><b>Call <tt>accept()</tt>:</b>  This will accept a connection from
+a client.  This function returns <i>another socket descriptor</i>!  The
+old descriptor is still listening for new connections, but this new one
+is connected to the client:
+
+<p>
+<pre>
+    len = sizeof(struct sockaddr_un);
+    s2 = accept(s, &remote, &len);
+</pre>
+
+<p>
+When <tt>accept()</tt> returns, the <tt>remote</tt> variable will be
+filled with the remote side's <tt><nobr>struct sockaddr_un</nobr></tt>,
+and <tt>len</tt> will be set to its length.  The descriptor <tt>s2</tt>
+is connected to the client, and is ready for <tt>send()</tt> and
+<tt>recv()</tt>, as described in the <a href=../net/#sendrecv>Network
+Programming Guide</a>.
+
+<p>
+<li><b>Handle the connection and loop back to <tt>accept()</tt>:</b>
+Usually you'll want to communicate to the client here (we'll just echo
+back everything it sends us), close the connection, then
+<tt>accept()</tt> a new one.
+
+<p>
+<pre>
+    while (len = recv(s2, &buf, 100, 0), len > 0)
+        send(s2, &buf, len, 0);
+
+    /* loop back to accept() from here */
+</pre>
+
+<p>
+<li><b>Close the connection:</b>  You can close the connection either by
+calling <tt>close()</tt>, or by calling <tt><a
+href=../net/#closedown>shutdown()</a></tt>.
+
+</ol>
+
+<p>
+With all that said, here is some source for an echoing server, <tt><a
+href=echos.c>echos.c</a></tt>.  All it does is wait for a connection on
+a Unix socket (named, in this case, "echo_socket").
+
+<p>
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;errno.h&gt;
+    #include &lt;string.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;sys/socket.h&gt;
+    #include &lt;sys/un.h&gt;
+
+    #define SOCK_PATH "echo_socket"
+
+    int main(void)
+    {
+        int s, s2, t, len;
+        struct sockaddr_un local, remote;
+        char str[100];
+
+        if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+            perror("socket");
+            exit(1);
+        }
+
+        local.sun_family = AF_UNIX;
+        strcpy(local.sun_path, SOCK_PATH);
+        unlink(local.sun_path);
+        len = strlen(local.sun_path) + sizeof(local.sun_family);
+        if (bind(s, (struct sockaddr *)&local, len) == -1) {
+            perror("bind");
+            exit(1);
+        }
+
+        if (listen(s, 5) == -1) {
+            perror("listen");
+            exit(1);
+        }
+
+        for(;;) {
+            int done, n;
+            printf("Waiting for a connection...\n");
+            t = sizeof(remote);
+            if ((s2 = accept(s, (struct sockaddr *)&remote, &t)) == -1) {
+                perror("accept");
+                exit(1);
+            }
+
+            printf("Connected.\n");
+
+            done = 0;
+            do {
+                n = recv(s2, str, 100, 0);
+                if (n &lt;= 0) {
+                    if (n &lt; 0) perror("recv");
+                    done = 1;
+                }
+
+                if (!done) 
+                    if (send(s2, str, n, 0) &lt; 0) {
+                        perror("send");
+                        done = 1;
+                    }
+            } while (!done);
+
+            close(s2);
+        }
+
+        return 0;
+    }
+</pre>
+
+<p>
+As you can see, all the aforementioned steps are included in this
+program: call <tt>socket()</tt>, call <tt>bind()</tt>, call
+<tt>listen()</tt>, call <tt>accept()</tt>, and
+do some network <tt>send()</tt>s and <tt>recv()</tt>s.
+
+<h2>What to do to be a client</h2>
+
+<p>
+There needs to be a program to talk to the above server, right?  Except
+with the client, it's a lot easier because you don't have to do any
+pesky <tt>listen()</tt>ing or <tt>accept()</tt>ing.  Here are the steps:
+
+<p>
+<ol>
+<li>Call <tt>socket()</tt> to get a Unix domain socket to communicate
+through.
+<p>
+<li>Set up a <nobr><tt>struct sockaddr_un</tt></nobr> with the remote
+address (where the server is listening) and call <tt>connect()</tt> with
+that as an argument
+<p>
+<li>Assuming no errors, you're connected to the remote side!  Use
+<tt>send()</tt> and <tt>recv()</tt> to your heart's content!
+</ol>
+
+<p>
+How about code to talk to the echo server, above?  No sweat, friends, 
+here is <tt><a href=echoc.c>echoc.c</a></tt>:
+
+<p>
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;errno.h&gt;
+    #include &lt;string.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;sys/socket.h&gt;
+    #include &lt;sys/un.h&gt;
+    
+    #define SOCK_PATH "echo_socket"
+
+    int main(void)
+    {
+        int s, t, len;
+        struct sockaddr_un remote;
+        char str[100];
+
+        if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+            perror("socket");
+            exit(1);
+        }
+
+        printf("Trying to connect...\n");
+
+        remote.sun_family = AF_UNIX;
+        strcpy(remote.sun_path, SOCK_PATH);
+        len = strlen(remote.sun_path) + sizeof(remote.sun_family);
+        if (connect(s, (struct sockaddr *)&remote, len) == -1) {
+            perror("connect");
+            exit(1);
+        }
+
+        printf("Connected.\n");
+
+        while(printf("&gt; "), fgets(str, 100, stdin), !feof(stdin)) {
+            if (send(s, str, strlen(str), 0) == -1) {
+                perror("send");
+                exit(1);
+            }
+
+            if ((t=recv(s, str, 100, 0)) &gt; 0) {
+                str[t] = '\0';
+                printf("echo&gt; %s", str);
+            } else {
+                if (t &lt; 0) perror("recv");
+                else printf("Server closed connection\n");
+                exit(1);
+            }
+        }
+
+        close(s);
+
+        return 0;
+    }
+</pre>
+
+<p>
+In the client code, of course you'll notice that there are only a few
+system calls used to set things up: <tt>socket()</tt> and
+<tt>connect()</tt>.  
+Since the client isn't going to be <tt>accept()</tt>ing any incoming
+connections, there's no need for it to <tt>listen()</tt>.  Of course,
+the client still uses <tt>send()</tt> and <tt>recv()</tt> for
+transferring data.  That about sums it up.
+
+<p>
+<h2><tt>socketpair()</tt>--quick full-duplex pipes</h2>
+
+<p>
+What if you wanted a <tt><a href=pipe.html>pipe()</a></tt>, but you
+wanted to use a single pipe to send and recieve data from <i>both
+sides</i>?  Since pipes are unidirectional (with exceptions in SYSV),
+you can't do it!  There is a solution, though: use a Unix domain socket,
+since they can handle bi-directional data.
+
+<p>
+What a pain, though!  Setting up all that code with <tt>listen()</tt>
+and <tt>connect()</tt> and all that just to pass data both ways!  But
+guess what!  You don't have to!
+
+<p>
+That's right, there's a beauty of a system call known as
+<tt>socketpair()</tt> this is nice enough to return to you a pair of
+<i>already connected sockets</i>!  No extra work is needed on your part;
+you can immediately use these socket descriptors for interprocess
+communication.
+
+<p>
+For instance, lets set up two processes.  The first sends a
+<tt>char</tt> to the second, and the second changes the character to
+uppercase and returns it.  Here is some simple code to do just that,
+called <tt><a href=spair.c>spair.c</a></tt> (with no error checking for clarity):
+
+<p>
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;
+    #include &lt;ctype.h&gt;
+    #include &lt;unistd.h&gt;
+    #include &lt;sys/types.h&gt;
+    #include &lt;sys/socket.h&gt;
+
+    int main(void)
+    {
+        int sv[2]; /* the pair of socket descriptors */
+        char buf; /* for data exchange between processes */
+
+        socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
+
+        if (!fork()) {  /* child */
+            read(sv[1], &buf, 1);
+            printf("child: read '%c'\n", buf);
+            buf = toupper(buf);  /* make it uppercase */
+            write(sv[1], &buf, 1);
+            printf("child: sent '%c'\n", buf);
+
+        } else { /* parent */
+            write(sv[0], "b", 1);
+            printf("parent: sent 'b'\n");
+            read(sv[0], &buf, 1);
+            printf("parent: read '%c'\n", buf);
+        }
+        return 0;
+    }
+</pre>
+
+<p>
+Sure, it's an expensive way to change a character to uppercase, but it's
+the fact that you have simple communication going on here that really
+matters.
+
+<p>
+One more thing to notice is that <tt>socketpair()</tt> takes both a
+domain (<tt>AF_UNIX</tt>) and socket type (<tt>SOCK_STREAM</tt>).  These
+can be any legal values at all, depending on which routines in the
+kernel you want to handle your code, and whether you want stream or
+datagram sockets.  I chose <tt>AF_UNIX</tt> sockets because this is a
+Unix sockets document and they're a bit faster than <tt>AF_INET</tt>
+sockets, I hear.
+
+<p>
+Finally, you might be curious as to why I'm using <tt>write()</tt> and
+<tt>read()</tt> instead of <tt>send()</tt> and <tt>recv()</tt>.  Well,
+in short, I was being lazy.  See, by using these system calls, I don't
+have to enter the <i>flags</i> argument that <tt>send()</tt> and
+<tt>recv()</tt> use, and I always set it to zero anyway.  Of course,
+socket descriptors are just file descriptors like any other, so they
+respond just fine to many file manipulation system calls.
+
+<h2>HPUX man pages</h2>
+
+<i>If you don't run HPUX, be sure to check your local man pages!</i>
+
+<ul>
+<li><tt><a href=man.cgi?2+accept>accept()</a></tt>
+<li><tt><a href=man.cgi?2+bind>bind()</a></tt>
+<li><tt><a href=man.cgi?2+connect>connect()</a></tt>
+<li><tt><a href=man.cgi?2+listen>listen()</a></tt>
+<li><tt><a href=man.cgi?2+socket>socket()</a></tt>
+<li><tt><a href=man.cgi?2+socketpair>socketpair()</a></tt>
+<li><tt><a href=man.cgi?2+send>send()</a></tt>
+<li><tt><a href=man.cgi?2+recv>recv()</a></tt>
+<li><tt><a href=man.cgi?2+read>read()</a></tt>
+<li><tt><a href=man.cgi?2+write>write()</a></tt>
+</ul>
+
+<hr>
+<a href=http://www.ecst.csuchico.edu/~beej/guide/ipc/>Back to the IPC main page</a>
+(http://www.ecst.csuchico.edu/~beej/guide/ipc/)
+
+<p>
+
+<small><b>Copyright &copy 1997 by Brian "Beej" Hall.  This guide may be
+reprinted in any medium provided that its content is not altered, it is
+presented in its entirety, and this copyright notice remains
+intact.  Contact <i><a href=mailto:beej@ecst.csuchico.edu>beej@ecst.csuchico.edu</a></i> for
+more information.</b></small>
+
+</body>
+</html>
