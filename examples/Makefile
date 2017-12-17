@@ -1,6 +1,7 @@
 BIN=echoc echos fork1 kirk lockdemo mmapdemo pipe1 pipe2 pipe3 semdemo \
 	semrm shmdemo sigint sigusr spair speak spock tick
 
+.PHONY: all
 all: $(BIN)
 
 echoc: echoc.c
@@ -57,6 +58,10 @@ spock: spock.c
 tick: tick.c
 	gcc -Wall -Wextra -o $@ $<
 
+.PHONY: clean
 clean:
 	rm -f $(BIN)
 	rm -f american_maid
+
+.PHONY: pristine
+pristine: clean
