@@ -3253,8 +3253,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) \
-	                                                       == (caddr_t)(-1)) {
+	data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
 	if (data == (caddr_t)(-1)) {
 		perror("mmap");
 		exit(1);
