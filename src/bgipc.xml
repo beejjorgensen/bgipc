@@ -2498,7 +2498,7 @@ put <const>1</const> as this argument.</p>
 
 <p>One field in the <nobr><type>struct sembuf</type></nobr> that I
 haven't mentioned is the <var>sem_flg</var> field which allows the
-program to specify flags the further modify the effects of the
+program to specify flags to further modify the effects of the
 <func>semop()</func> call.</p>
 
 <p>One of these flags is <const>IPC_NOWAIT</const> which, as the name
