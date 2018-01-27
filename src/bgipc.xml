@@ -1377,7 +1377,7 @@ readers, anyway?</p>
 The way to do this is to call <func>open()</func> with the
 <const>O_NDELAY</const> flag set in the mode argument:</p>
 
-<code>fd = open(FIFO_NAME, O_RDONLY | <b>O_NDELAY</b>);</code>
+<code>fd = open(FIFO_NAME, O_WRONLY | <b>O_NDELAY</b>);</code>
 
 <p>This will cause <func>open()</func> to return <const>-1</const> if
 there are no processes that have the file open for reading.</p>
