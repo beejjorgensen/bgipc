@@ -12,11 +12,14 @@
 
 #define MAX_RETRIES 10
 
+#ifdef NEED_SEMUN
+/* Defined in sys/sem.h as required by POSIX now */
 union semun {
 	int val;
 	struct semid_ds *buf;
 	ushort *array;
 };
+#endif
 
 /*
 ** initsem() -- more-than-inspired by W. Richard Stevens' UNIX Network
@@ -27,7 +30,7 @@ int initsem(key_t key, int nsems)  /* key from ftok() */
 	int i;
 	union semun arg;
 	struct semid_ds buf;
-	struct sembuf sb;
+	struct sembuf sb = { 0 };  /* best to always init structs */
 	int semid;
 
 	semid = semget(key, nsems, IPC_CREAT | IPC_EXCL | 0666);
@@ -48,7 +51,6 @@ int initsem(key_t key, int nsems)  /* key from ftok() */
 				return -1; /* error, check errno */
 			}
 		}
-
 	} else if (errno == EEXIST) { /* someone else got it first */
 		int ready = 0;
 

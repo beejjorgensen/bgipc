@@ -16,8 +16,10 @@
 int main(void)
 {
 	int s, s2, len;
-	unsigned t;
-	struct sockaddr_un local, remote;
+	struct sockaddr_un remote, local = {
+            .sun_family = AF_UNIX,
+            // .sun_path = SOCK_PATH,   // Can't do assignment to an array
+        };
 	char str[100];
 
 	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -25,7 +27,6 @@ int main(void)
 		exit(1);
 	}
 
-	local.sun_family = AF_UNIX;
 	strcpy(local.sun_path, SOCK_PATH);
 	unlink(local.sun_path);
 	len = strlen(local.sun_path) + sizeof(local.sun_family);
@@ -42,8 +43,8 @@ int main(void)
 	for(;;) {
 		int done, n;
 		printf("Waiting for a connection...\n");
-		t = sizeof(remote);
-		if ((s2 = accept(s, (struct sockaddr *)&remote, &t)) == -1) {
+		socklen_t slen = sizeof(remote);
+		if ((s2 = accept(s, (struct sockaddr *)&remote, &slen)) == -1) {
 			perror("accept");
 			exit(1);
 		}
@@ -52,7 +53,7 @@ int main(void)
 
 		done = 0;
 		do {
-			n = recv(s2, str, 100, 0);
+			n = recv(s2, str, sizeof(str), 0);
 			if (n <= 0) {
 				if (n < 0) perror("recv");
 				done = 1;
@@ -70,6 +71,3 @@ int main(void)
 
 	return 0;
 }
-
-
-

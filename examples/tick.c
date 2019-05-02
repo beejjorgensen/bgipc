@@ -25,7 +25,7 @@ int main(void)
 	printf("got a writer\n");
 
 	do {
-		if ((num = read(fd, s, 300)) == -1)
+		if ((num = read(fd, s, sizeof(s))) == -1)
 			perror("read");
 		else {
 			s[num] = '\0';
