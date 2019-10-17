@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2.7
 #
 # bg2conv -- a semi-hardcoded parser for Beej's Guide XML files
 #

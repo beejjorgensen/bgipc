@@ -10,13 +10,15 @@
 
 int main(int argc, char *argv[])
 {
-	                /* l_type   l_whence  l_start  l_len  l_pid   */
-	struct flock fl = {F_WRLCK, SEEK_SET,   0,      0,     0 };
+	struct flock fl = {
+            .l_type = F_WRLCK,
+            .l_whence = SEEK_SET,
+            .l_start = 0,
+            .l_len = 0,
+        };
 	int fd;
 
 	(void)argv; // silence unused warning
-
-	fl.l_pid = getpid();
 
 	if (argc > 1) 
 		fl.l_type = F_RDLCK;
@@ -52,4 +54,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-

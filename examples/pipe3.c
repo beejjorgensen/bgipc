@@ -13,17 +13,16 @@ int main(void)
 	pipe(pfds);
 
 	if (!fork()) {
-		close(1);       /* close normal stdout */
-		dup(pfds[1]);   /* make stdout same as pfds[1] */
+		dup2(pfds[1], 1); /* combines close() and dup(), atomically */
 		close(pfds[0]); /* we don't need this */
+		close(pfds[1]); /* we don't need this */
 		execlp("ls", "ls", NULL);
 	} else {
-		close(0);       /* close normal stdin */
-		dup(pfds[0]);   /* make stdin same as pfds[0] */
+		dup2(pfds[0], 0); /* combines close() and dup(), atomically */
+		close(pfds[0]); /* we don't need this */
 		close(pfds[1]); /* we don't need this */
 		execlp("wc", "wc", "-l", NULL);
 	}
 
 	return 0;
 }
-
