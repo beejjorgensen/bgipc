@@ -592,8 +592,7 @@ which function you want to call to handle it.</p>
 
 <p>Here's the <func>sigaction()</func> breakdown:</p>
 
-<code>int sigaction(int <param>sig</param>, const struct sigaction *<param>act</param>,
-              struct sigaction *<param>oact</param>);</code>
+<code>int sigaction(int <param>sig</param>, const struct sigaction *<param>act</param>, struct sigaction *<param>oact</param>);</code>
 
 <p>The first parameter, <param>sig</param> is which signal to catch.
 This can be (probably "should" be) a symbolic name from
@@ -641,18 +640,19 @@ url="&samplepre;sigint.c">sigint.c</ulink></file>:</p>
 
 void sigint_handler(int sig)
 {
-	write(0, "Ahhh! SIGINT!\n", 14);
+        /* using a char[] so that sizeof will work */
+	const char msg[] = "Ahhh! SIGINT!\n";
+	write(0, msg, sizeof(msg));
 }
 
 int main(void)
 {
-	void sigint_handler(int sig); /* prototype */
 	char s[200];
-	struct sigaction sa;
-
-	sa.sa_handler = sigint_handler;
-	sa.sa_flags = 0; // or SA_RESTART
-	sigemptyset(&sa.sa_mask);
+        struct sigaction sa = {
+            .sa_handler = sigint_handler,
+            .sa_flags = 0, // or SA_RESTART
+            .sa_mask = 0,
+        };
 
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
 		perror("sigaction");
@@ -815,13 +815,13 @@ void sigusr1_handler(int sig)
 
 int main(void)
 {
-	struct sigaction sa;
+        struct sigaction sa = {
+            .sa_handler = sigusr1_handler,
+            .sa_flags = 0, // or SA_RESTART
+            .sa_mask = 0,
+        };
 
 	got_usr1 = 0;
-
-	sa.sa_handler = sigusr1_handler;
-	sa.sa_flags = 0;
-	sigemptyset(&sa.sa_mask);
 
 	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
 		perror("sigaction");
@@ -1513,14 +1513,14 @@ needed, <func>open()</func>ing the file with the matching mode, and
 calling <func>fcntl()</func> with the proper arguments, <foreign>comme
 &#231;a</foreign>:</p>
 
-<code><![CDATA[struct flock fl;
+<code><![CDATA[struct flock fl = {
+    .l_type   = F_WRLCK,  /* F_RDLCK, F_WRLCK, F_UNLCK      */
+    .l_whence = SEEK_SET, /* SEEK_SET, SEEK_CUR, SEEK_END   */
+    .l_start  = 0,        /* Offset from l_whence           */
+    .l_len    = 0,        /* length, 0 = to EOF             */
+    // .l_pid             /* PID holding lock; F_RDLCK only */
+};
 int fd;
-	
-fl.l_type   = F_WRLCK;  /* F_RDLCK, F_WRLCK, F_UNLCK    */
-fl.l_whence = SEEK_SET; /* SEEK_SET, SEEK_CUR, SEEK_END */
-fl.l_start  = 0;        /* Offset from l_whence         */
-fl.l_len    = 0;        /* length, 0 = to EOF           */
-fl.l_pid    = getpid(); /* our PID                      */
 
 fd = open("filename", O_WRONLY);
 
@@ -1554,8 +1554,8 @@ or end of file.</td></tr>
 <var>l_start</var> which is relative to <var>l_whence</var>.</td></tr>
 
 <tr><td><var>l_pid</var></td>
-<td>The process ID of the process dealing with the lock.  Use
-<func>getpid()</func> to get this.</td></tr>
+<td>The process ID of the process holding the lock.  This is set by
+the kernel when using the F_RDLCK command.</td></tr>
 
 </table>
 
@@ -1635,14 +1635,14 @@ just reuse that first example and add the code to unlock it at the
 end:</p>
 
 <code>
-struct flock fl;
+struct flock fl = {
+    .l_type   = F_WRLCK,  /* F_RDLCK, F_WRLCK, F_UNLCK      */
+    .l_whence = SEEK_SET, /* SEEK_SET, SEEK_CUR, SEEK_END   */
+    .l_start  = 0,        /* Offset from l_whence           */
+    .l_len    = 0,        /* length, 0 = to EOF             */
+    // .l_pid             /* PID holding lock; F_RDLCK only */
+};
 int fd;
-
-fl.l_type   = F_WRLCK;  /* F_RDLCK, F_WRLCK, F_UNLCK    */
-fl.l_whence = SEEK_SET; /* SEEK_SET, SEEK_CUR, SEEK_END */
-fl.l_start  = 0;        /* Offset from l_whence         */
-fl.l_len    = 0;        /* length, 0 = to EOF           */
-fl.l_pid    = getpid(); /* our PID                      */
 
 fd = open("filename", O_WRONLY);  /* get the file descriptor */
 fcntl(fd, F_SETLKW, &amp;fl);  /* set the lock, waiting if necessary */
@@ -1685,11 +1685,13 @@ read lock (<const>F_RDLCK</const>) on it.</p>
 
 int main(int argc, char *argv[])
 {
-	                /* l_type   l_whence  l_start  l_len  l_pid   */
-	struct flock fl = {F_WRLCK, SEEK_SET,   0,      0,     0 };
+        struct flock fl = {
+            .l_type = F_WRLCK,
+            .l_whence = SEEK_SET,
+            .l_start = 0,
+            .l_len = 0,
+        };
 	int fd;
-
-	fl.l_pid = getpid();
 
 	if (argc > 1) 
 		fl.l_type = F_RDLCK;
@@ -1755,7 +1757,8 @@ picture&emdash;well, I've heard about them.</p>
 <p>Locks rule.  Sometimes, though, you might need more control over your
 processes in a producer-consumer situation.  For this reason, if no
 other, you should see the document on System V <link
-dest="semaphores">semaphores</link> if your system supports such a
+dest="semaphores">semaphores</link> (or POSIX, for that matter; they aren't identical)
+if your system supports such a
 beast.  They provide a more extensive and at least equally function
 equivalent to file locks.</p>
 
@@ -1773,7 +1776,9 @@ equivalent to file locks.</p>
 <p>Those people who brought us System V have seen fit to include some
 IPC goodies that have been implemented on various platforms (including
 Linux, of course.)  This document describes the usage and functionality
-of the extremely groovy System V Message Queues!</p>
+of the extremely groovy System V Message Queues!  Linux also supports a
+POSIX version of each of these; see <emp>mq_overview</emp>,
+<emp>sem_overview</emp>, and <emp>shm_overview</emp></p> in the man pages.
 
 <p>As usual, I want to spew some overview at you before getting into the
 nitty-gritty.  A message queue works kind of like a <link
@@ -1790,8 +1795,9 @@ connect to an existing one.  In this, the latter, way two processes can
 exchange information through the same message queue.  Score.</p>
 
 <p>One more thing about System V IPC: when you create a message queue,
-it doesn't go away until you destroy it.  All the processes that have
-ever used it can quit, but the queue will still exist.  A good practice
+it doesn't go away until you destroy it, just like how files don't
+go away until you explicitly remove them.  All the processes that
+have ever used it can quit, but the queue will still exist.  A good practice
 is to use the <com>ipcs</com> command to check if any of your unused
 message queues are just floating around out there.  You can destroy them
 with the <com>ipcrm</com> command, which is preferable to getting a
@@ -1843,7 +1849,10 @@ arguments:</p>
 <code>key_t ftok(const char *<param>path</param>, int <param>id</param>);</code>
 
 <p>Ok, this is getting weird.  Basically, <param>path</param> just has
-to be a file that this process can read.  The other argument,
+to be a path to a file that uniquely identifies this application; the
+pathname to the application's configuration file is a common string
+to use (what are the odds that two applications will use the same
+configuration file?).  The other argument,
 <param>id</param> is usually just set to some arbitrary char, like 'A'.
 The <func>ftok()</func> function uses information about the named file
 (like inode number, etc.) and the <param>id</param> to generate a
@@ -1906,8 +1915,7 @@ instance, we could use this structure to store all kinds of goodies:</p>
 <p>Ok, so how do we pass this information to a message queue?  The answer
 is simple, my friends: just use <func>msgsnd()</func>:</p>
 
-<code>int msgsnd(int <param>msqid</param>, const void *<param>msgp</param>,
-           size_t <param>msgsz</param>, int <param>msgflg</param>);</code>
+<code>int msgsnd(int <param>msqid</param>, const void *<param>msgp</param>, size_t <param>msgsz</param>, int <param>msgflg</param>);</code>
 
 <p><param>msqid</param> is the message queue identifier returned by
 <func>msgget()</func>.  The pointer <param>msgp</param> is a pointer to
@@ -1999,8 +2007,7 @@ msgrcv(msqid, &pmb, sizeof(struct pirate_info), 2, 0);]]></code>
 call:</p>
 
 <code>
-int msgrcv(int <param>msqid</param>, void *<param>msgp</param>, size_t <param>msgsz</param>,
-           long <param>msgtyp</param>, int <param>msgflg</param>);</code>
+int msgrcv(int <param>msqid</param>, void *<param>msgp</param>, size_t <param>msgsz</param>, long <param>msgtyp</param>, int <param>msgflg</param>);</code>
 
 <p>The <const>2</const> we specified in the call is the requested
 <param>msgtyp</param>.  Recall that we set the <param>mtype</param>
@@ -2064,8 +2071,7 @@ this requires the introduction of another function:
 
 <p>The synopsis of <func>msgctl()</func> is:</p>
 
-<code>int msgctl(int <param>msqid</param>, int <param>cmd</param>,
-           struct msqid_ds *<param>buf</param>);</code>
+<code>int msgctl(int <param>msqid</param>, int <param>cmd</param>, struct msqid_ds *<param>buf</param>);</code>
 
 <p>Of course, <param>msqid</param> is the queue identifier obtained from
 <func>msgget()</func>.  The important argument is <param>cmd</param>
@@ -2083,7 +2089,8 @@ can destroy that queue by issuing the following call:</p>
 .
 msgctl(msqid, IPC_RMID, NULL);]]></code>
 
-<p>And the message queue is no more.</p>
+<p>And the message queue is no more.
+(Of course, error checking of these return values is always appropriate!)</p>
 
 </sect2>
 
@@ -2141,7 +2148,7 @@ int main(void)
 		/* ditch newline at end, if it exists */
 		if (buf.mtext[len-1] == '\n') buf.mtext[len-1] = '\0';
 
-		if (msgsnd(msqid, &buf, len+1, 0) == -1) /* +1 for '\0' */
+		if (msgsnd(msqid, &buf, len, 0) == -1)
 			perror("msgsnd");
 	}
 
@@ -2280,13 +2287,16 @@ described in the <link dest="mqftok">Message Queues section</link>.)</p>
 <p>The next argument, <param>nsems</param>, is (you guessed it!) the
 number of semaphores in this semaphore set.  The maximum number is system
 dependent, but it's probably around 32000.  If you're needing
-more (greedy wretch!), just get another semaphore set.</p>
+more (greedy wretch!), just get another semaphore set. You may pass
+<const>0</const> if you're connecting to an existing semaphore
+set, but you must specify a positive number if you're creating
+a new semaohore set.</p>
 
 <p>Finally, there's the <param>semflg</param> argument.  This tells
 <func>semget()</func> what the permissions should be on the new semaphore
 set, whether you're creating a new set or just want to connect to an
 existing one, and other things that you can look up.  For creating a new
-set, you can bit-wise or the access permissions with
+set, permissions can be bitwise-OR'd with
 <const>IPC_CREAT</const>.</p>
 
 <p>Here's an example call that generates the <param>key</param> with
@@ -2321,8 +2331,8 @@ same time, a race condition might develop.</p>
 
 <p>One way to get around this difficulty is by having a single init
 process that creates and initializes the semaphore long before the
-main processes begin to run.  The main processes just access it, but
-never create nor destroy it.</p>
+main processes begin to run.  The main process just accesses it, but
+never creates nor destroys it.</p>
 
 <p>Stevens refers to this problem as the semaphore's "fatal flaw".  He
 solves it by creating the semaphore set with the <const>IPC_EXCL</const>
@@ -2357,8 +2367,7 @@ them to a positive value to show that the resource is available to use.
 The function <func>semctl()</func> allows you to do atomic value changes
 to individual semaphores or complete sets of semaphores.</p>
 
-<code>int semctl(int <param>semid</param>, int <param>semnum</param>,
-           int <param>cmd</param>, ... /*<param>arg</param>*/);</code>
+<code>int semctl(int <param>semid</param>, int <param>semnum</param>, int <param>cmd</param>, ... /*<param>arg</param>*/);</code>
 
 <p><param>semid</param> is the semaphore set id that you get from your
 call to <func>semget()</func>, earlier.  <param>semnum</param> is the ID
@@ -2369,14 +2378,20 @@ to be a <type>union semun</type>, which will be defined by you in your
 code to be one of these:</p>
 
 <code>union semun {
-	int val;               /* used for SETVAL only */
-	struct semid_ds *buf;  /* used for IPC_STAT and IPC_SET */
-	ushort *array;         /* used for GETALL and SETALL */
+    int val;               /* used for SETVAL only */
+    struct semid_ds *buf;  /* used for IPC_STAT and IPC_SET */
+    ushort *array;         /* used for GETALL and SETALL */
 };</code>
+
+<p>(Note that <code>union semun</code> is now defined in the header
+files of modern Linux systems.  However, I don't know what feature
+test macro to use to determine this, so only define this union if
+your system doesn't already.  Read the docs for <func>semctl()</func>
+for more information.)</p>
 
 <p>The various fields in the <type>union semun</type> are used depending
 on the value of the <param>cmd</param> parameter to
-<func>setctl()</func> (a partial list follows&emdash;see your local man
+<func>semctl()</func> (a partial list follows&emdash;see your local man
 page for more):</p>
 
 <table border="0">
@@ -2414,14 +2429,14 @@ member of the <type>union semun</type>.</td></tr>
 
 </table>
 
-<p>For the curious, here are the contents of the <type>struct
+<p>For the curious, here are the (abbreviated) contents of the <type>struct
 semid_ds</type> that is used in the <type>union semun</type>:</p>
 
 <code>struct semid_ds {
-	struct ipc_perm sem_perm;  /* Ownership and permissions
-	time_t          sem_otime; /* Last semop time */
-	time_t          sem_ctime; /* Last change time */
-	unsigned short  sem_nsems; /* No. of semaphores in set */
+    struct ipc_perm sem_perm;  /* Ownership and permissions
+    time_t          sem_otime; /* Last semop time */
+    time_t          sem_ctime; /* Last change time */
+    unsigned short  sem_nsems; /* No. of semaphores in set */
 };</code>
 
 <p>We'll use that <var>sem_otime</var> member later on when we write our
@@ -2444,9 +2459,9 @@ and its functionality is dictated by a structure that is passed to it,
 <code>/* Warning!  Members might not be in this order! */
 
 struct sembuf {
-	ushort sem_num;
-	short sem_op;
-	short sem_flg;
+    ushort sem_num;
+    short sem_op;
+    short sem_flg;
 };</code>
 
 <p>Of course, <var>sem_num</var> is the number of the semaphore in the
@@ -2482,8 +2497,7 @@ the semaphore's value.</td></tr>
 sembuf</type></nobr> with whatever values you want, then call
 <func>semop()</func>, like this:</p>
 
-<code>int semop(int <param>semid</param>, struct sembuf *<param>sops</param>,
-          unsigned int <param>nsops</param>);</code>
+<code>int semop(int <param>semid</param>, struct sembuf *<param>sops</param>, unsigned int <param>nsops</param>);</code>
 
 <p>The <param>semid</param> argument is the number obtained from the
 call to <func>semget()</func>.  Next is <param>sops</param>, which is a
@@ -2586,11 +2600,14 @@ race conditions, Stevens-style:</p>
 
 #define MAX_RETRIES 10
 
+#ifdef NEED_SEMUN
+/* Defined in sys/sem.h as required by POSIX now */
 union semun {
-	int val;
-	struct semid_ds *buf;
-	ushort *array;
+    int val;
+    struct semid_ds *buf;
+    ushort *array;
 };
+#endif
 
 /*
 ** initsem() -- more-than-inspired by W. Richard Stevens' UNIX Network
@@ -2598,101 +2615,101 @@ union semun {
 */
 int initsem(key_t key, int nsems)  /* key from ftok() */
 {
-	int i;
-	union semun arg;
-	struct semid_ds buf;
-	struct sembuf sb;
-	int semid;
+    int i;
+    union semun arg;
+    struct semid_ds buf;
+    struct sembuf sb;
+    int semid;
 
-	semid = semget(key, nsems, IPC_CREAT | IPC_EXCL | 0666);
+    semid = semget(key, nsems, IPC_CREAT | IPC_EXCL | 0666);
 
-	if (semid >= 0) { /* we got it first */
-		sb.sem_op = 1; sb.sem_flg = 0;
-		arg.val = 1;
+    if (semid >= 0) { /* we got it first */
+            sb.sem_op = 1; sb.sem_flg = 0;
+            arg.val = 1;
 
-		printf("press return\n"); getchar();
+            printf("press return\n"); getchar();
 
-		for(sb.sem_num = 0; sb.sem_num < nsems; sb.sem_num++) { 
-			/* do a semop() to "free" the semaphores. */
-			/* this sets the sem_otime field, as needed below. */
-			if (semop(semid, &sb, 1) == -1) {
-				int e = errno;
-				semctl(semid, 0, IPC_RMID); /* clean up */
-				errno = e;
-				return -1; /* error, check errno */
-			}
-		}
+            for(sb.sem_num = 0; sb.sem_num < nsems; sb.sem_num++) { 
+                    /* do a semop() to "free" the semaphores. */
+                    /* this sets the sem_otime field, as needed below. */
+                    if (semop(semid, &sb, 1) == -1) {
+                            int e = errno;
+                            semctl(semid, 0, IPC_RMID); /* clean up */
+                            errno = e;
+                            return -1; /* error, check errno */
+                    }
+            }
 
-	} else if (errno == EEXIST) { /* someone else got it first */
-		int ready = 0;
+    } else if (errno == EEXIST) { /* someone else got it first */
+            int ready = 0;
 
-		semid = semget(key, nsems, 0); /* get the id */
-		if (semid < 0) return semid; /* error, check errno */
+            semid = semget(key, nsems, 0); /* get the id */
+            if (semid < 0) return semid; /* error, check errno */
 
-		/* wait for other process to initialize the semaphore: */
-		arg.buf = &buf;
-		for(i = 0; i < MAX_RETRIES && !ready; i++) {
-			semctl(semid, nsems-1, IPC_STAT, arg);
-			if (arg.buf->sem_otime != 0) {
-				ready = 1;
-			} else {
-				sleep(1);
-			}
-		}
-		if (!ready) {
-			errno = ETIME;
-			return -1;
-		}
-	} else {
-		return semid; /* error, check errno */
-	}
+            /* wait for other process to initialize the semaphore: */
+            arg.buf = &buf;
+            for(i = 0; i < MAX_RETRIES && !ready; i++) {
+                    semctl(semid, nsems-1, IPC_STAT, arg);
+                    if (arg.buf->sem_otime != 0) {
+                            ready = 1;
+                    } else {
+                            sleep(1);
+                    }
+            }
+            if (!ready) {
+                    errno = ETIME;
+                    return -1;
+            }
+    } else {
+            return semid; /* error, check errno */
+    }
 
-	return semid;
+    return semid;
 }
 
 int main(void)
 {
-	key_t key;
-	int semid;
-	struct sembuf sb;
-	
-	sb.sem_num = 0;
-	sb.sem_op = -1;  /* set to allocate resource */
-	sb.sem_flg = SEM_UNDO;
+    key_t key;
+    int semid;
+    struct sembuf sb;
+    
+    sb.sem_num = 0;
+    sb.sem_op = -1;  /* set to allocate resource */
+    sb.sem_flg = SEM_UNDO;
 
-	if ((key = ftok("semdemo.c", 'J')) == -1) {
-		perror("ftok");
-		exit(1);
-	}
+    if ((key = ftok("semdemo.c", 'J')) == -1) {
+            perror("ftok");
+            exit(1);
+    }
 
-	/* grab the semaphore set created by seminit.c: */
-	if ((semid = initsem(key, 1)) == -1) {
-		perror("initsem");
-		exit(1);
-	}
+    /* grab the semaphore set created by seminit.c: */
+    if ((semid = initsem(key, 1)) == -1) {
+            perror("initsem");
+            exit(1);
+    }
 
-	printf("Press return to lock: ");
-	getchar();
-	printf("Trying to lock...\n");
+    printf("Press return to lock: ");
+    getchar();
+    printf("Trying to lock...\n");
 
-	if (semop(semid, &sb, 1) == -1) {
-		perror("semop");
-		exit(1);
-	}
+    if (semop(semid, &sb, 1) == -1) {
+            perror("semop");
+            exit(1);
+    }
 
-	printf("Locked.\n");
-	printf("Press return to unlock: ");
-	getchar();
+    printf("Locked.\n");
+    printf("Press return to unlock: ");
+    getchar();
 
-	sb.sem_op = 1; /* free resource */
-	if (semop(semid, &sb, 1) == -1) {
-		perror("semop");
-		exit(1);
-	}
+    sb.sem_op = 1; /* free resource */
+    if (semop(semid, &sb, 1) == -1) {
+            perror("semop");
+            exit(1);
+    }
 
-	printf("Unlocked\n");
+    printf("Unlocked\n");
 
-	return 0;
+    return 0;
 }]]></code>
 
 <p>Here's <ulink url="&samplepre;semrm.c"><file>semrm.c</file></ulink>
@@ -2707,28 +2724,28 @@ for removing the semaphore when you're done:</p>
 
 int main(void)
 {
-	key_t key;
-	int semid;
-	union semun arg;
+    key_t key;
+    int semid;
+    union semun arg;
 
-	if ((key = ftok("semdemo.c", 'J')) == -1) {
-		perror("ftok");
-		exit(1);
-	}
+    if ((key = ftok("semdemo.c", 'J')) == -1) {
+            perror("ftok");
+            exit(1);
+    }
 
-	/* grab the semaphore set created by seminit.c: */
-	if ((semid = semget(key, 1, 0)) == -1) {
-		perror("semget");
-		exit(1);
-	}
+    /* grab the semaphore set created by seminit.c: */
+    if ((semid = semget(key, 1, 0)) == -1) {
+            perror("semget");
+            exit(1);
+    }
 
-	/* remove it: */
-	if (semctl(semid, 0, IPC_RMID, arg) == -1) {
-		perror("semctl");
-		exit(1);
-	}
+    /* remove it: */
+    if (semctl(semid, 0, IPC_RMID, 0) == -1) {
+            perror("semctl");
+            exit(1);
+    }
 
-	return 0;
+    return 0;
 }]]></code>
 
 <p>Isn't that fun!  I'm sure you'll give up Quake just to play with this
@@ -2767,9 +2784,11 @@ them&emdash;you might as well use 'em.</p>
 
 <p>The cool thing about shared memory segments is that they are what
 they sound like: a segment of memory that is shared between processes.
-I mean, think of the potential of this!  You could allocate a block a
+I mean, think of the potential of this!  You could allocate a block of
 player information for a multi-player game and have each process access
-it at will!  Fun, fun, fun.</p>
+it at will!  Fun, fun, fun.  (Of course, memory-mapped files accomplish
+the same thing and have the added advantage of persistence, albeit with
+the same caveats that apply to shared memory.)</p>
 
 <p>There are, as usual, more gotchas to watch out for, but it's all
 pretty easy in the long run.  See, you just connect to the shared memory
@@ -2784,8 +2803,7 @@ actually, but I was just trying to make you more comfortable.</p>
 <p>Similarly to other forms of System V IPC, a shared memory segment is
 created and connected to via the <func>shmget()</func> call:</p>
 
-<code>int shmget(key_t <param>key</param>, size_t <param>size</param>,
-           int <param>shmflg</param>);</code>
+<code>int shmget(key_t <param>key</param>, size_t <param>size</param>, int <param>shmflg</param>);</code>
 
 <p>Upon successful completion, <func>shmget()</func> returns an
 identifier for the shared memory segment.  The <param>key</param>
@@ -2793,7 +2811,7 @@ argument should be created the same was as shown in the <link
 dest="mqftok">Message Queues</link> document, using <func>ftok()</func>.
 The next argument, <param>size</param>, is the size in bytes of the
 shared memory segment.  Finally, the <param>shmflg</param> should be set
-to the permissions of the segment bitwise-ORd with
+to the permissions of the segment bitwise-OR'd with
 <const>IPC_CREAT</const> if you want to create the segment, but can be
 <const>0</const> otherwise.  (It doesn't hurt to specify
 <const>IPC_CREAT</const> every time&emdash;it will simply connect you if
@@ -2807,6 +2825,13 @@ int shmid;
 
 key = ftok("/home/beej/somefile3", 'R');
 shmid = shmget(key, 1024, 0644 | IPC_CREAT);</code>
+
+<p>(It may not be possible to actually create a 1K segment, as the
+operating system is allowed to increase the size to fit any internal
+constraints it may have.  For example, on a system with 4K virtual
+pages, it's likely the size will be increased to 4K.  Of course,
+your program won't know or care; this is just an implementation
+detail.)</p>
 
 <p>But how do you get a pointer to that data from the <var>shmid</var>
 handle?  The answer is in the call <func>shmat()</func>, in the
@@ -2828,7 +2853,8 @@ memory ID you got from the call to <func>shmget()</func>.  Next is
 which specific address to use but you should just set it to
 <const>0</const> and let the OS choose the address for you.  Finally,
 the <param>shmflg</param> can be set to <const>SHM_RDONLY</const> if you
-only want to read from it, <const>0</const> otherwise.</p>
+only want to read from it, <const>0</const> otherwise.  (Check the man pages
+for other useful flags that can be included.)</p>
 
 <p>Here's a more complete example of how to get a pointer to a shared
 memory segment:</p>
@@ -2844,18 +2870,28 @@ data = shmat(shmid, (void *)0, 0);</code>
 <p>And <emp>bammo</emp>!  You have the pointer to the shared memory
 segment!  Notice that <func>shmat()</func> returns a <type>void</type>
 pointer, and we're treating it, in this case, as a <type>char</type>
-pointer.  You can treat is as anything you like, depending on what kind
+pointer.  You can treat it as anything you like, depending on what kind
 of data you have in there.  Pointers to arrays of structures are just as
 acceptable as anything else.</p>
 
 <p>Also, it's interesting to note that <func>shmat()</func> returns
-<const>-1</const> on failure.  But how do you get <const>-1</const> in a
+<const>-1</const> on failure (as does <func>mmap()</func>).
+But how do you get <const>-1</const> in a
 <type>void</type> pointer?  Just do a cast during the comparison to
 check for errors:</p>
 
 <code>data = shmat(shmid, (void *)0, 0);
-if (data == (char *)(-1))
-	perror("shmat");</code>
+if (data == (void *)(-1))   /* Would love to use MAP_FAILED! */
+    perror("shmat");</code>
+
+<p>(It's important to note that the integer is being cast to a pointer,
+and not the pointer return value being cast to an integer.  It's a
+subtle difference, but the latter is not always portable between
+architectures.  Also note that the cast is to <type>void*</type>
+and not <type>char*</type>, as you might expect.  Since the language
+guarantees that implicit casts from <type>void*</type> to any other
+kind of pointer are always safe and reliable, it's better to use
+<type>void*</type> and let the compiler to the work.)</p>
 
 <p>All you have to do now is change the data it points to normal
 pointer-style. There are some samples in the next section.</p>
@@ -2878,7 +2914,7 @@ print it like this:</p>
 <p>And we could store something in it as easily as this:</p>
 
 <code>printf("Enter a string: ");
-gets(data);</code>
+fgets(data, 1024, stdin);</code>
 
 <p>Of course, like I said earlier, you can have other data in there
 besides just <type>char</type>s.  I'm just using them as an example.
@@ -2892,7 +2928,8 @@ there.</p>
 <title>Detaching from and deleting segments</title>
 
 <p>When you're done with the shared memory segment, your program should
-detach itself from it using the <func>shmdt()</func> call:</p>
+detach itself from it using the <func>shmdt()</func> call (if you don't,
+this will happen automatically when the process terminates):</p>
 
 <code>int shmdt(void *<param>shmaddr</param>);</code>
 
@@ -2909,12 +2946,12 @@ to the control calls for the other System V IPC functions:</p>
 
 <p>The above call deletes the shared memory segment, assuming no one
 else is attached to it.  The <func>shmctl()</func> function does a lot
-more than this, though, and it worth looking into.  (On your own, of
+more than this, though, and is worth looking into.  (On your own, of
 course, since this is only an overview!)</p>
 
 <p>As always, you can destroy the shared memory segment from the command
 line using the <com>ipcrm</com> Unix command.  Also, be sure that you
-don't leave any usused shared memory segments sitting around wasting
+don't leave any unused shared memory segments sitting around wasting
 system resources.  All the System V IPC objects you own can be viewed
 using the <com>ipcs</com> command.</p>
 
@@ -2932,7 +2969,7 @@ multiple writers to a shared object.</p>
 <p>The way to get around this is to use <link
 dest="semaphores">Semaphores</link> to lock the shared memory segment
 while a process is writing to it.  (Sometimes the lock will encompass
-both a read an write to the shared memory, depending on what you're
+both a read and write to the shared memory, depending on what you're
 doing.)</p>
 
 <p>A true discussion of concurrency is beyond the scope of this paper,
@@ -2973,49 +3010,53 @@ url="&samplepre;shmdemo.c">shmdemo.c</ulink>:</p>
 
 int main(int argc, char *argv[])
 {
-	key_t key;
-	int shmid;
-	char *data;
-	int mode;
+    key_t key;
+    int shmid;
+    char *data;
+    int mode;
 
-	if (argc > 2) {
-		fprintf(stderr, "usage: shmdemo [data_to_write]\n");
-		exit(1);
-	}
+    if (argc > 2) {
+            fprintf(stderr, "usage: shmdemo [data_to_write]\n");
+            exit(1);
+    }
 
-	/* make the key: */
-	if ((key = ftok("shmdemo.c", 'R')) == -1) {
-		perror("ftok");
-		exit(1);
-	}
+    /* make the key: */
+    if ((key = ftok("shmdemo.c", 'R')) == -1) {
+            perror("ftok");
+            exit(1);
+    }
 
-	/* connect to (and possibly create) the segment: */
-	if ((shmid = shmget(key, SHM_SIZE, 0644 | IPC_CREAT)) == -1) {
-		perror("shmget");
-		exit(1);
-	}
+    /* connect to (and possibly create) the segment: */
+    if ((shmid = shmget(key, SHM_SIZE, 0644 | IPC_CREAT)) == -1) {
+            perror("shmget");
+            exit(1);
+    }
 
-	/* attach to the segment to get a pointer to it: */
-	data = shmat(shmid, (void *)0, 0);
-	if (data == (char *)(-1)) {
-		perror("shmat");
-		exit(1);
-	}
+    /* attach to the segment to get a pointer to it: */
+    data = shmat(shmid, (void *)0, 0);
 
-	/* read or modify the segment, based on the command line: */
-	if (argc == 2) {
-		printf("writing to segment: \"%s\"\n", argv[1]);
-		strncpy(data, argv[1], SHM_SIZE);
-	} else
-		printf("segment contains: \"%s\"\n", data);
+    /* we _could_ use MAP_FAILED, but technically that's not */
+    /* the defined return value.  System V failed on this one! */
+    if (data == (void *)(-1)) {
+            perror("shmat");
+            exit(1);
+    }
 
-	/* detach from the segment: */
-	if (shmdt(data) == -1) {
-		perror("shmdt");
-		exit(1);
-	}
+    /* read or modify the segment, based on the command line: */
+    if (argc == 2) {
+            printf("writing to segment: \"%s\"\n", argv[1]);
+            strncpy(data, argv[1], SHM_SIZE);
+            data[SHM_SIZE-1] = '\0';
+    } else
+            printf("segment contains: \"%s\"\n", data);
 
-	return 0;
+    /* detach from the segment: */
+    if (shmdt(data) == -1) {
+            perror("shmdt");
+            exit(1);
+    }
+
+    return 0;
 }]]></code>
 
 <p>More commonly, a process will attach to the segment and run for a bit
@@ -3070,8 +3111,7 @@ specified in the <param>prot</param> parameter to the
 <p>To memory map a file, you use the <func>mmap()</func> system call,
 which is defined as follows:</p>
 
-<code>void *mmap(void *<param>addr</param>, size_t <param>len</param>, int <param>prot</param>,
-           int <param>flags</param>, int <param>fildes</param>, off_t <param>off</param>);</code>
+<code>void *mmap(void *<param>addr</param>, size_t <param>len</param>, int <param>prot</param>, int <param>flags</param>, int <param>fildes</param>, off_t <param>off</param>);</code>
 
 <p>What a slew of parameters!  Here they are, one at a time:</p>
 
@@ -3079,7 +3119,7 @@ which is defined as follows:</p>
 <table border="0">
 <tr><td width="15%"><param>addr</param></td>
 <td width="85%">This is the address we want the file mapped into.  The
-best way to use this is to set it to <const>(caddr_t)0</const> and let
+best way to use this is to set it to <const>(void *)0</const> and let
 the OS choose it for you.  If you tell it to use an address the OS
 doesn't like (for instance, if it's not a multiple of the virtual memory
 page size), it'll give you an error.</td></tr>
@@ -3097,11 +3137,11 @@ this process has to the memory mapped region.  This can be a bitwise-ORd
 mixture of the following values: <const>PROT_READ</const>,
 <const>PROT_WRITE</const>, and <const>PROT_EXEC</const>, for read,
 write, and execute permissions, respectively.  The value specified here
-must be equivalent to the mode specified in the <func>open()</func>
+must be equivalent to or a subset of the modes specified in the <func>open()</func>
 system call that is used to get the file descriptor.</td></tr>
 
 <tr><td><param>flags</param></td>
-<td>There are just miscellaneous flags that can be set for the system
+<td>These are just miscellaneous flags that can be set for the system
 call.  You'll want to set it to <const>MAP_SHARED</const> if you're
 planning to share your changes to the file with other processes, or
 <const>MAP_PRIVATE</const> otherwise.  If you set it to the latter, your
@@ -3119,13 +3159,16 @@ earlier.</td></tr>
 <td>This is the offset in the file that you want to start mapping from.
 A restriction: this <emp>must</emp> be a multiple of the virtual memory
 page size.  This page size can be obtained with a call to
-<func>getpagesize()</func>.</td></tr>
+<func>getpagesize()</func>.  Note that 32-bit systems may support
+files with sizes that cannot be expressed by 32-bit unsigned integers,
+so this type is often a 64-bit type on such systems.</td></tr>
 
 </table>
 
 <p>As for return values, as you might have guessed, <func>mmap()</func>
-returns <const>-1</const> on error, and sets <var>errno</var>.
-Otherwise, it returns a pointer to the start of the mapped data.</p>
+returns <const>MAP_FAILED</const> on error (the value <const>-1</const>
+properly cast to be compared), and sets <var>errno</var>.  Otherwise,
+it returns a pointer to the start of the mapped data.</p>
 
 <p>Anyway, without any further ado, we'll do a short demo that maps the
 second "page" of a file into memory.  First we'll <func>open()</func> it
@@ -3144,15 +3187,12 @@ char *data;
 
 fd = open("foo", O_RDONLY);
 pagesize = getpagesize();
-data = mmap((caddr_t)0, pagesize, PROT_READ, MAP_SHARED, fd,
-pagesize);</code>
-  
+data = mmap((void*)0, pagesize, PROT_READ, MAP_SHARED, fd, pagesize);</code>
+
 <p>Once this code stretch has run, you can access the first byte of the
 mapped section of file using <var>data[0]</var>.  Notice there's a lot
 of type conversion going on here.  For instance, <func>mmap()</func>
-returns <type>caddr_t</type>, but we treat it as a <type>char*</type>.
-Well, the fact is that <type>caddr_t</type> usually is defined to be a
-<type>char*</type>, so everything's fine.</p>
+returns <type>void*</type>, but we treat it as a <type>char*</type>.</p>
 
 <p>Also notice that we've mapped the file <const>PROT_READ</const> so we
 have read-only access.  Any attempt to write to the data
@@ -3169,7 +3209,7 @@ want read-write access to the data.</p>
 <p>There is, of course, a <func>munmap()</func> function to un-memory map a
 file:</p>
 
-<code>int munmap(caddr_t <param>addr</param>, size_t <param>len</param>);</code>
+<code>int munmap(void *<param>addr</param>, size_t <param>len</param>);</code>
 
 <p>This simply unmaps the region pointed to by <param>addr</param>
 (returned from <func>mmap()</func>) with length <param>len</param> (same
@@ -3227,41 +3267,43 @@ url="&samplepre;mmapdemo.c">mmapdemo.c</ulink></file>:</p>
 
 int main(int argc, char *argv[])
 {
-	int fd, offset;
-	char *data;
-	struct stat sbuf;
+    int fd;
+    off_t offset;
+    char *data;
+    struct stat sbuf;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: mmapdemo offset\n");
-		exit(1);
-	}
+    if (argc != 2) {
+            fprintf(stderr, "usage: mmapdemo offset\n");
+            exit(1);
+    }
 
-	if ((fd = open("mmapdemo.c", O_RDONLY)) == -1) {
-		perror("open");
-		exit(1);
-	}
+    if ((fd = open("mmapdemo.c", O_RDONLY)) == -1) {
+            perror("open");
+            exit(1);
+    }
 
-	if (stat("mmapdemo.c", &sbuf) == -1) {
-		perror("stat");
-		exit(1);
-	}
+    if (stat("mmapdemo.c", &sbuf) == -1) {
+            perror("stat");
+            exit(1);
+    }
 
-	offset = atoi(argv[1]);
-	if (offset < 0 || offset > sbuf.st_size-1) {
-		fprintf(stderr, "mmapdemo: offset must be in the range 0-%d\n", \
-		                                                      sbuf.st_size-1);
-		exit(1);
-	}
+
+    offset = atoi(argv[1]);
+    if (offset < 0 || offset > sbuf.st_size-1) {
+        fprintf(stderr, "mmapdemo: offset must be in the range 0-%d\n", \
+                                                          sbuf.st_size-1);
+        exit(1);
+    }
 	
-	data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
-	if (data == (caddr_t)(-1)) {
-		perror("mmap");
-		exit(1);
-	}
+    data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    if (data == MAP_FAILED) {
+        perror("mmap");
+        exit(1);
+    }
 
-	printf("byte at offset %d is '%c'\n", offset, data[offset]);
+    printf("byte at offset %ld is '%c'\n", offset, data[offset]);
 
-	return 0;
+    return 0;
 }]]></code>
 
 <p>That's all there is to it.  Compile that sucker up and run it with
@@ -3273,6 +3315,51 @@ byte at offset 30 is 'e'</screen>
 <p>I'll leave it up to you to write some really cool programs using this
 system call.</p>
 
+</sect2>
+
+<sect2 id="mmobs">
+<title>Observations on memory mapping</title>
+
+<p>I would be remiss if I didn't point out a few interesting aspects
+of using mapped files on Linux.  First, the memory that the operating
+system allocates to use as the storage for the mapped file data is
+<emp>the same memory</emp> used to perform file buffering operations
+when other processes perform <func>read()</func> and <func>write()</func>
+operations!  While <func>read()</func>s and <func>write()</func>s
+are guaranteed atomic by POSIX up to a certain size, that goes out
+the window when some processes bypass the POSIX functions entirely!</p>
+
+<p>Second, because we're bypassing those POSIX functions, we can
+read and write the buffer contents without regard to record locking
+that might be applied to the file descriptor (as discussed in a
+previous section).  Normally, this isn't a big deal&emdash;who's
+going to use memory mapped files in one application while using
+record locking in another, when both access the same file?  If the
+file is documented to require record locking, then all applications
+should use it.  That said, there's nothing stopping an application
+from using the read and write locking we discussed previously
+immediately before updating the memory that belongs to the mapped
+file.</p>
+
+<p>Third, because we're bypassing those POSIX functions (do I sound
+like a broken record yet?), the system is not capable of providing
+meaningful readahead or writebehind strategies.  As of this writing,
+Linux kernel versions 4.x and later <emp>do</emp> implement an
+algorithm that detects when two adjacent page faults occur within
+a memory mapped file, and it performs a minimal amount of readahead
+(just two pages, compared to the readahead configurable at the file
+system layer, which can be upwards of 256KB).  There is no writebehind
+whatsoever, as there's no practical way to detect when adjacent
+pages are written to under current hardware configurations.</p>
+
+<p>Last, given all of the above, there are still very compelling
+reasons to use memory mapped files.  The primary one being that
+such files are, by definition, "persistent storage", meaning
+applications do not have to create lengthy <func>load()</func> /
+<func>save()</func> functions for their data if they use memory
+mapped files.  However, any binary data will be written in a platform
+dependent manner (such as endianness) so those files are likely not
+portable.</p>
 </sect2>
 
 <sect2 id="mmsum">
@@ -3297,7 +3384,7 @@ processes.</p>
 <title>Unix Sockets</title>
 
 <p>Remember <link dest="fifos">FIFOs</link>?  Remember how they can
-only send data in one direction, just like a <link
+only send data in one direction, just like <link
 dest="pipes">Pipes</link>?  Wouldn't it be grand if you could send
 data in both directions like you can with a socket?</p>
 
@@ -3339,8 +3426,8 @@ is, the path to the special file that is the socket), you use a
 fields:</p>
 
 <code>struct sockaddr_un {
-	unsigned short sun_family;  /* AF_UNIX */
-	char sun_path[108];
+    unsigned short sun_family;  /* AF_UNIX */
+    char sun_path[108];
 }</code>
 
 <p>This is the structure you will be passing to the <func>bind()</func>
@@ -3366,10 +3453,13 @@ everything it gets on the socket.</p>
 socket:</p>
 
 <code>unsigned int s, s2;
-struct sockaddr_un local, remote;
+struct sockaddr_un remote, local = {
+        .sun_family = AF_UNIX,
+        // .sun_path = SOCK_PATH,   // Can't do assignment to an array
+};
 int len;
 
-s = socket(AF_UNIX, SOCK_STREAM, 0);</code>
+s = socket(<emp>AF_UNIX</emp>, SOCK_STREAM, 0);</code>
 
 <p>The second argument, <const>SOCK_STREAM</const>, tells
 <func>socket()</func> to create a stream socket.  Yes, datagram sockets
@@ -3391,8 +3481,7 @@ from the call to <func>socket()</func>, now you want to bind that to an
 address in the Unix domain.  (That address, as I said before, is a
 special file on disk.)</p>
 
-<code>local.sun_family = AF_UNIX;  /* local is declared before socket() ^ */
-strcpy(local.sun_path, "/home/beej/mysocket");
+<code>strcpy(local.sun_path, "/home/beej/mysocket");
 unlink(local.sun_path);
 len = strlen(local.sun_path) + sizeof(local.sun_family);
 bind(s, (struct sockaddr *)&amp;local, len);</code>
@@ -3422,7 +3511,7 @@ from a client.  This function returns <emp>another socket
 descriptor</emp>!  The old descriptor is still listening for new
 connections, but this new one is connected to the client:</p>
 
-<code>len = sizeof(struct sockaddr_un);
+<code>len = sizeof(remote);
 s2 = accept(s, &amp;remote, &amp;len);</code>
 
 <p>When <func>accept()</func> returns, the <var>remote</var> variable
@@ -3439,7 +3528,7 @@ client here (we'll just echo back everything it sends us), close the
 connection, then <func>accept()</func> a new one.</p>
 
 <code>while (len = recv(s2, &amp;buf, 100, 0), len > 0)
-	send(s2, &amp;buf, len, 0);
+    send(s2, &amp;buf, len, 0);
 
 /* loop back to accept() from here */</code>
 
@@ -3466,64 +3555,67 @@ connection on a Unix socket (named, in this case, "echo_socket").</p>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <unistd.h>
 
 #define SOCK_PATH "echo_socket"
 
 int main(void)
 {
-	int s, s2, t, len;
-	struct sockaddr_un local, remote;
-	char str[100];
+    int s, s2, len;
+    struct sockaddr_un remote, local = {
+            .sun_family = AF_UNIX,
+            // .sun_path = SOCK_PATH,   // Can't do assignment to an array
+    };
+    char str[100];
 
-	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-		perror("socket");
-		exit(1);
-	}
+    if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+            perror("socket");
+            exit(1);
+    }
 
-	local.sun_family = AF_UNIX;
-	strcpy(local.sun_path, SOCK_PATH);
-	unlink(local.sun_path);
-	len = strlen(local.sun_path) + sizeof(local.sun_family);
-	if (bind(s, (struct sockaddr *)&local, len) == -1) {
-		perror("bind");
-		exit(1);
-	}
+    strcpy(local.sun_path, SOCK_PATH);
+    unlink(local.sun_path);
+    len = strlen(local.sun_path) + sizeof(local.sun_family);
+    if (bind(s, (struct sockaddr *)&local, len) == -1) {
+            perror("bind");
+            exit(1);
+    }
 
-	if (listen(s, 5) == -1) {
-		perror("listen");
-		exit(1);
-	}
+    if (listen(s, 5) == -1) {
+            perror("listen");
+            exit(1);
+    }
 
-	for(;;) {
-		int done, n;
-		printf("Waiting for a connection...\n");
-		t = sizeof(remote);
-		if ((s2 = accept(s, (struct sockaddr *)&remote, &t)) == -1) {
-			perror("accept");
-			exit(1);
-		}
+    for(;;) {
+            int done, n;
+            printf("Waiting for a connection...\n");
+            socklen_t slen = sizeof(remote);
+            if ((s2 = accept(s, (struct sockaddr *)&remote, &slen)) == -1) {
+                    perror("accept");
+                    exit(1);
+            }
 
-		printf("Connected.\n");
+            printf("Connected.\n");
 
-		done = 0;
-		do {
-			n = recv(s2, str, 100, 0);
-			if (n <= 0) {
-				if (n < 0) perror("recv");
-				done = 1;
-			}
+            done = 0;
+            do {
+                    n = recv(s2, str, sizeof(str), 0);
+                    if (n <= 0) {
+                            if (n < 0) perror("recv");
+                            done = 1;
+                    }
 
-			if (!done) 
-				if (send(s2, str, n, 0) < 0) {
-					perror("send");
-					done = 1;
-				}
-		} while (!done);
+                    if (!done) 
+                            if (send(s2, str, n, 0) < 0) {
+                                    perror("send");
+                                    done = 1;
+                            }
+            } while (!done);
 
-		close(s2);
-	}
+            close(s2);
+    }
 
-	return 0;
+    return 0;
 }]]></code>
 
 <p>As you can see, all the aforementioned steps are included in this
@@ -3566,13 +3658,17 @@ url="&samplepre;echoc.c"><file>echoc.c</file></ulink>:</p>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <unistd.h>
 
 #define SOCK_PATH "echo_socket"
 
 int main(void)
 {
-    int s, t, len;
-    struct sockaddr_un remote;
+    int s, len;
+    struct sockaddr_un remote = {
+        .sun_family = AF_UNIX,
+        // .sun_path = SOCK_PATH,   // Can't do assignment to an array
+    };
     char str[100];
 
     if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -3582,7 +3678,6 @@ int main(void)
 
     printf("Trying to connect...\n");
 
-    remote.sun_family = AF_UNIX;
     strcpy(remote.sun_path, SOCK_PATH);
     len = strlen(remote.sun_path) + sizeof(remote.sun_family);
     if (connect(s, (struct sockaddr *)&remote, len) == -1) {
@@ -3592,17 +3687,18 @@ int main(void)
 
     printf("Connected.\n");
 
-    while(printf("> "), fgets(str, 100, stdin), !feof(stdin)) {
-        if (send(s, str, strlen(str), 0) == -1) {
+    /* size in fgets() includes the null byte */
+    while(printf("> "), fgets(str, sizeof(str), stdin), !feof(stdin)) {
+        if (send(s, str, strlen(str)+1, 0) == -1) {
             perror("send");
             exit(1);
         }
 
-        if ((t=recv(s, str, 100, 0)) > 0) {
-            str[t] = '\0';
+        if ((len=recv(s, str, sizeof(str)-1, 0)) > 0) {
+            str[len] = '\0';
             printf("echo> %s", str);
         } else {
-            if (t < 0) perror("recv");
+            if (len < 0) perror("recv");
             else printf("Server closed connection\n");
             exit(1);
         }
@@ -3658,30 +3754,30 @@ called <file><ulink url="&samplepre;spair.c">spair.c</ulink></file>
 
 int main(void)
 {
-	int sv[2]; /* the pair of socket descriptors */
-	char buf; /* for data exchange between processes */
+    int sv[2]; /* the pair of socket descriptors */
+    char buf; /* for data exchange between processes */
 
-	if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
-		perror("socketpair");
-		exit(1);
-	}
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+            perror("socketpair");
+            exit(1);
+    }
 
-	if (!fork()) {  /* child */
-		read(sv[1], &buf, 1);
-		printf("child: read '%c'\n", buf);
-		buf = toupper(buf);  /* make it uppercase */
-		write(sv[1], &buf, 1);
-		printf("child: sent '%c'\n", buf);
+    if (!fork()) {  /* child */
+            read(sv[1], &buf, 1);
+            printf("child: read '%c'\n", buf);
+            buf = toupper(buf);  /* make it uppercase */
+            write(sv[1], &buf, 1);
+            printf("child: sent '%c'\n", buf);
 
-	} else { /* parent */
-		write(sv[0], "b", 1);
-		printf("parent: sent 'b'\n");
-		read(sv[0], &buf, 1);
-		printf("parent: read '%c'\n", buf);
-		wait(NULL); /* wait for child to die */
-	}
+    } else { /* parent */
+            write(sv[0], "b", 1);
+            printf("parent: sent 'b'\n");
+            read(sv[0], &buf, 1);
+            printf("parent: read '%c'\n", buf);
+            wait(NULL); /* wait for child to die */
+    }
 
-	return 0;
+    return 0;
 }]]></code>
 
 <p>Sure, it's an expensive way to change a character to uppercase, but

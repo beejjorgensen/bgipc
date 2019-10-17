@@ -14,6 +14,8 @@ int main(void)
 	pid_t pid;
 	int rv;
 
+        // Be sure to flush all stdio buffers, or the output will be
+        // duplicated when both parent and child flush them later!
 	switch(pid = fork()) {
 	case -1:
 		perror("fork");  /* something went wrong */
@@ -40,4 +42,3 @@ int main(void)
 
 	return 0;
 }
-

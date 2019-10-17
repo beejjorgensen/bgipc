@@ -41,7 +41,7 @@ int main(void)
 		/* ditch newline at end, if it exists */
 		if (buf.mtext[len-1] == '\n') buf.mtext[len-1] = '\0';
 
-		if (msgsnd(msqid, &buf, len+1, 0) == -1) /* +1 for '\0' */
+		if (msgsnd(msqid, &buf, len, 0) == -1)
 			perror("msgsnd");
 	}
 
@@ -52,4 +52,3 @@ int main(void)
 
 	return 0;
 }
-

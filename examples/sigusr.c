@@ -19,13 +19,12 @@ void sigusr1_handler(int sig)
 
 int main(void)
 {
-	struct sigaction sa;
+	struct sigaction sa = {
+	    .sa_handler = sigusr1_handler,
+	    .sa_flags = 0, // or SA_RESTART
+	};
 
 	got_usr1 = 0;
-
-	sa.sa_handler = sigusr1_handler;
-	sa.sa_flags = 0;
-	sigemptyset(&sa.sa_mask);
 
 	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
 		perror("sigaction");
@@ -41,4 +40,3 @@ int main(void)
 
 	return 0;
 }
-

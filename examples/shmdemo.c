@@ -35,8 +35,12 @@ int main(int argc, char *argv[])
 	}
 
 	/* attach to the segment to get a pointer to it: */
+        /* note that 'void*' will be implicitly converted to 'char*' */
 	data = shmat(shmid, (void *)0, 0);
-	if (data == (char *)(-1)) {
+
+	/* we _could_ use MAP_FAILED, but technically that's not */
+	/* the defined return value.  System V failed on this one! */
+	if (data == (void *)(-1)) {
 		perror("shmat");
 		exit(1);
 	}
@@ -45,6 +49,7 @@ int main(int argc, char *argv[])
 	if (argc == 2) {
 		printf("writing to segment: \"%s\"\n", argv[1]);
 		strncpy(data, argv[1], SHM_SIZE);
+                data[SHM_SIZE-1] = '\0';
 	} else
 		printf("segment contains: \"%s\"\n", data);
 
