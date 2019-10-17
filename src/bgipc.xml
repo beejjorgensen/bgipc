@@ -592,7 +592,8 @@ which function you want to call to handle it.</p>
 
 <p>Here's the <func>sigaction()</func> breakdown:</p>
 
-<code>int sigaction(int <param>sig</param>, const struct sigaction *<param>act</param>, struct sigaction *<param>oact</param>);</code>
+<code>int sigaction(int <param>sig</param>, const struct sigaction *<param>act</param>,
+              struct sigaction *<param>oact</param>);</code>
 
 <p>The first parameter, <param>sig</param> is which signal to catch.
 This can be (probably "should" be) a symbolic name from
@@ -1778,7 +1779,8 @@ IPC goodies that have been implemented on various platforms (including
 Linux, of course.)  This document describes the usage and functionality
 of the extremely groovy System V Message Queues!  Linux also supports a
 POSIX version of each of these; see <emp>mq_overview</emp>,
-<emp>sem_overview</emp>, and <emp>shm_overview</emp></p> in the man pages.
+<emp>sem_overview</emp>, and <emp>shm_overview</emp> in the man
+pages.</p>
 
 <p>As usual, I want to spew some overview at you before getting into the
 nitty-gritty.  A message queue works kind of like a <link
@@ -1915,7 +1917,8 @@ instance, we could use this structure to store all kinds of goodies:</p>
 <p>Ok, so how do we pass this information to a message queue?  The answer
 is simple, my friends: just use <func>msgsnd()</func>:</p>
 
-<code>int msgsnd(int <param>msqid</param>, const void *<param>msgp</param>, size_t <param>msgsz</param>, int <param>msgflg</param>);</code>
+<code>int msgsnd(int <param>msqid</param>, const void *<param>msgp</param>,
+           size_t <param>msgsz</param>, int <param>msgflg</param>);</code>
 
 <p><param>msqid</param> is the message queue identifier returned by
 <func>msgget()</func>.  The pointer <param>msgp</param> is a pointer to
@@ -2071,7 +2074,8 @@ this requires the introduction of another function:
 
 <p>The synopsis of <func>msgctl()</func> is:</p>
 
-<code>int msgctl(int <param>msqid</param>, int <param>cmd</param>, struct msqid_ds *<param>buf</param>);</code>
+<code>int msgctl(int <param>msqid</param>, int <param>cmd</param>,
+           struct msqid_ds *<param>buf</param>);</code>
 
 <p>Of course, <param>msqid</param> is the queue identifier obtained from
 <func>msgget()</func>.  The important argument is <param>cmd</param>
@@ -2367,7 +2371,8 @@ them to a positive value to show that the resource is available to use.
 The function <func>semctl()</func> allows you to do atomic value changes
 to individual semaphores or complete sets of semaphores.</p>
 
-<code>int semctl(int <param>semid</param>, int <param>semnum</param>, int <param>cmd</param>, ... /*<param>arg</param>*/);</code>
+<code>int semctl(int <param>semid</param>, int <param>semnum</param>,
+           int <param>cmd</param>, ... /*<param>arg</param>*/);</code>
 
 <p><param>semid</param> is the semaphore set id that you get from your
 call to <func>semget()</func>, earlier.  <param>semnum</param> is the ID
@@ -2383,7 +2388,7 @@ code to be one of these:</p>
     ushort *array;         /* used for GETALL and SETALL */
 };</code>
 
-<p>(Note that <code>union semun</code> is now defined in the header
+<p>(Note that <type>union semun</type> is now defined in the header
 files of modern Linux systems.  However, I don't know what feature
 test macro to use to determine this, so only define this union if
 your system doesn't already.  Read the docs for <func>semctl()</func>
@@ -2497,7 +2502,8 @@ the semaphore's value.</td></tr>
 sembuf</type></nobr> with whatever values you want, then call
 <func>semop()</func>, like this:</p>
 
-<code>int semop(int <param>semid</param>, struct sembuf *<param>sops</param>, unsigned int <param>nsops</param>);</code>
+<code>int semop(int <param>semid</param>, struct sembuf *<param>sops</param>,
+          unsigned int <param>nsops</param>);</code>
 
 <p>The <param>semid</param> argument is the number obtained from the
 call to <func>semget()</func>.  Next is <param>sops</param>, which is a
@@ -2803,7 +2809,8 @@ actually, but I was just trying to make you more comfortable.</p>
 <p>Similarly to other forms of System V IPC, a shared memory segment is
 created and connected to via the <func>shmget()</func> call:</p>
 
-<code>int shmget(key_t <param>key</param>, size_t <param>size</param>, int <param>shmflg</param>);</code>
+<code>int shmget(key_t <param>key</param>, size_t <param>size</param>,
+           int <param>shmflg</param>);</code>
 
 <p>Upon successful completion, <func>shmget()</func> returns an
 identifier for the shared memory segment.  The <param>key</param>
@@ -2881,7 +2888,7 @@ But how do you get <const>-1</const> in a
 check for errors:</p>
 
 <code>data = shmat(shmid, (void *)0, 0);
-if (data == (void *)(-1))   /* Would love to use MAP_FAILED! */
+if (data == MAP_FAILED)
     perror("shmat");</code>
 
 <p>(It's important to note that the integer is being cast to a pointer,
@@ -3111,7 +3118,8 @@ specified in the <param>prot</param> parameter to the
 <p>To memory map a file, you use the <func>mmap()</func> system call,
 which is defined as follows:</p>
 
-<code>void *mmap(void *<param>addr</param>, size_t <param>len</param>, int <param>prot</param>, int <param>flags</param>, int <param>fildes</param>, off_t <param>off</param>);</code>
+<code>void *mmap(void *<param>addr</param>, size_t <param>len</param>, int <param>prot</param>,
+           int <param>flags</param>, int <param>fildes</param>, off_t <param>off</param>);</code>
 
 <p>What a slew of parameters!  Here they are, one at a time:</p>
 
