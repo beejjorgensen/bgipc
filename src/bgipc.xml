@@ -1377,7 +1377,7 @@ readers, anyway?</p>
 The way to do this is to call <func>open()</func> with the
 <const>O_NDELAY</const> flag set in the mode argument:</p>
 
-<code>fd = open(FIFO_NAME, O_RDONLY | <b>O_NDELAY</b>);</code>
+<code>fd = open(FIFO_NAME, O_WRONLY | <b>O_NDELAY</b>);</code>
 
 <p>This will cause <func>open()</func> to return <const>-1</const> if
 there are no processes that have the file open for reading.</p>
@@ -2285,7 +2285,9 @@ by different processes to identify this semaphore set.  (This
 described in the <link dest="mqftok">Message Queues section</link>.)</p>
 
 <p>The next argument, <param>nsems</param>, is (you guessed it!) the
-number of semaphores in this semaphore set.  You may pass
+number of semaphores in this semaphore set.  The maximum number is system
+dependent, but it's probably around 32000.  If you're needing
+more (greedy wretch!), just get another semaphore set. You may pass
 <const>0</const> if you're connecting to an existing semaphore
 set, but you must specify a positive number if you're creating
 a new semaohore set.</p>
@@ -2510,7 +2512,7 @@ put <const>1</const> as this argument.</p>
 
 <p>One field in the <nobr><type>struct sembuf</type></nobr> that I
 haven't mentioned is the <var>sem_flg</var> field which allows the
-program to specify flags the further modify the effects of the
+program to specify flags to further modify the effects of the
 <func>semop()</func> call.</p>
 
 <p>One of these flags is <const>IPC_NOWAIT</const> which, as the name
@@ -3265,7 +3267,8 @@ url="&samplepre;mmapdemo.c">mmapdemo.c</ulink></file>:</p>
 
 int main(int argc, char *argv[])
 {
-    int fd, offset;
+    int fd;
+    off_t offset;
     char *data;
     struct stat sbuf;
 
@@ -3284,24 +3287,21 @@ int main(int argc, char *argv[])
             exit(1);
     }
 
-    /* technically, this is a problem.  'offset' should be of type 'off_t', */
-    /* yet that's an unsigned type so how could we do proper checking?  This */
-    /* is good enough for a simple demo, but if you're concerned, you should */
-    /* spend some time and investigate the right way to handle this. */
+
     offset = atoi(argv[1]);
     if (offset < 0 || offset > sbuf.st_size-1) {
-            fprintf(stderr, "mmapdemo: offset must be in the range 0..%d\n",
-                    sbuf.st_size-1);
-            exit(1);
+        fprintf(stderr, "mmapdemo: offset must be in the range 0-%d\n", \
+                                                          sbuf.st_size-1);
+        exit(1);
     }
-    
-    data = mmap((void *)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0));
+	
+    data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
     if (data == MAP_FAILED) {
-            perror("mmap");
-            exit(1);
+        perror("mmap");
+        exit(1);
     }
 
-    printf("byte at offset %d is '%c'\n", offset, data[offset]);
+    printf("byte at offset %ld is '%c'\n", offset, data[offset]);
 
     return 0;
 }]]></code>
