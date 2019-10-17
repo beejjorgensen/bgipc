@@ -13,7 +13,8 @@
 
 int main(int argc, char *argv[])
 {
-	int fd, offset;
+	int fd;
+	off_t offset;
 	char *data;
 	struct stat sbuf;
 
@@ -33,17 +34,17 @@ int main(int argc, char *argv[])
 	}
 
 	offset = atoi(argv[1]);
-	if (offset < 0 || offset > sbuf.st_size-1) {
+	if (offset > sbuf.st_size-1) {
 		fprintf(stderr, "mmapdemo: offset must be in the range 0-%ld\n", sbuf.st_size-1);
 		exit(1);
 	}
 	
-	if ((data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) == (caddr_t)(-1)) {
+	if ((data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED) {
 		perror("mmap");
 		exit(1);
 	}
 
-	printf("byte at offset %d is '%c'\n", offset, data[offset]);
+	printf("byte at offset %ld is '%c'\n", offset, data[offset]);
 
 	return 0;
 }
