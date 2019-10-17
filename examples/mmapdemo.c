@@ -34,12 +34,12 @@ int main(int argc, char *argv[])
 	}
 
 	offset = atoi(argv[1]);
-	if (offset > sbuf.st_size-1) {
+	if (offset < 0 || offset > sbuf.st_size-1) {
 		fprintf(stderr, "mmapdemo: offset must be in the range 0-%ld\n", sbuf.st_size-1);
 		exit(1);
 	}
 	
-	if ((data = mmap((caddr_t)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED) {
+	if ((data = mmap((void*)0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED) {
 		perror("mmap");
 		exit(1);
 	}
@@ -48,4 +48,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-								

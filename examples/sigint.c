@@ -17,13 +17,11 @@ void sigint_handler(int sig)
 
 int main(void)
 {
-	void sigint_handler(int sig); /* prototype */
 	char s[200];
-	struct sigaction sa;
-
-	sa.sa_handler = sigint_handler;
-	sa.sa_flags = 0; // or SA_RESTART
-	sigemptyset(&sa.sa_mask);
+	struct sigaction sa = {
+	    .sa_handler = sigint_handler,
+	    .sa_flags = 0, // or SA_RESTART
+	};
 
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
 		perror("sigaction");
@@ -39,4 +37,3 @@ int main(void)
 
 	return 0;
 }
-

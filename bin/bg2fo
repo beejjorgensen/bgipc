@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2.7
 #
 # bg2fo -- convert bg to Formatting Object XML
 #
