@@ -1117,7 +1117,7 @@ writes to it.  When this happens, the parent is said to
 that the parent tried to read, went to sleep, the child wrote and
 exited, and the parent woke up and read the data.</p>
 
-<p>Hurrah!!  You've just don't some interprocess communication!  That
+<p>Hurrah!!  You've just done some interprocess communication!  That
 was dreadfully simple, huh?  I'll bet you are still thinking that there
 aren't many uses for <func>pipe()</func> and, well, you're probably
 right.  The other forms of IPC are generally more useful and are often
