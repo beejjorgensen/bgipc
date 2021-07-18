@@ -362,7 +362,7 @@ process table with defunct processes owned by <com>init</com>.  Wouldn't
 that make your sysadmin happy?</p>
 
 <p>Your mission: make sure your parent process either ignores
-<const>SIGHCLD</const>, or <func>wait()</func>s for all the children it
+<const>SIGCHLD</const>, or <func>wait()</func>s for all the children it
 <func>fork()</func>s.  Well, you don't <emp>always</emp> have to do that
 (like if you're starting a daemon or something), but you code with
 caution if you're a <func>fork()</func> novice.  Otherwise, feel free to
