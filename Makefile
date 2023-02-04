@@ -1,42 +1,52 @@
 PACKAGE=bgipc
 UPLOADDIR=beej71@alfalfa.dreamhost.com:~/beej.us/guide/$(PACKAGE)
-BUILDDIR=./build
+BUILDDIR=./stage
+BUILDTMP=./build_tmp
 
 .PHONY: all
 all:
-	$(MAKE) -C builders
+	$(MAKE) -C src
+	$(MAKE) -C source clean
 
-.PHONY: buildcp
-buildcp:
-	mkdir -p $(BUILDDIR)/pdf
-	mkdir -p $(BUILDDIR)/html/single
-	mkdir -p $(BUILDDIR)/html/multi
-	mkdir -p $(BUILDDIR)/html/archive
-	mkdir -p $(BUILDDIR)/translations
-	mkdir -p $(BUILDDIR)/examples
-	cp -v website/* $(BUILDDIR)
-	cp -v builders/print/*.pdf $(BUILDDIR)/pdf
-	cp -v builders/html/$(PACKAGE)*.{tgz,zip} $(BUILDDIR)/html/archive
-	cp -v builders/html/singlepage/*.{html,css,png} $(BUILDDIR)/html/single
-	cp -v builders/html/multipage/*.{html,css,png} $(BUILDDIR)/html/multi
-	cp -v translations/*.pdf $(BUILDDIR)/translations 2>/dev/null || : 
-	cp -v examples/*.c $(BUILDDIR)/examples
-	cp -v examples/Makefile $(BUILDDIR)/examples
+.PHONY: stage
+stage:
+	mkdir -p $(BUILDDIR)/{pdf,html,translations,source}
+	mkdir -p $(BUILDDIR)/html/$(PACKAGE)
+	cp -v website/* website/.htaccess $(BUILDDIR)
+	cp -v src/$(PACKAGE)*.pdf $(BUILDDIR)/pdf
+	cp -v src/$(PACKAGE).html $(BUILDDIR)/html/index.html
+	cp -v src/$(PACKAGE)-wide.html $(BUILDDIR)/html/index-wide.html
+	cp -v src/split/* $(BUILDDIR)/html/$(PACKAGE)
+	( cd $(BUILDDIR)/html; zip -r $(PACKAGE).zip $(PACKAGE); mv $(PACKAGE) split )
+	mkdir -p $(BUILDDIR)/html/$(PACKAGE)
+	cp -v src/split-wide/* $(BUILDDIR)/html/$(PACKAGE)
+	( cd $(BUILDDIR)/html; zip -r $(PACKAGE)-wide.zip $(PACKAGE); mv $(PACKAGE) split-wide )
+	#cp -v src/{cs,dataencap}.svg $(BUILDDIR)/html/
+	cp -v translations/*.{pdf,html} $(BUILDDIR)/translations 2>/dev/null || : 
+	cp -rv source/* $(BUILDDIR)/source
+	mkdir -p $(BUILDTMP)/$(PACKAGE)_source
+	cp -rv source/* $(BUILDTMP)/$(PACKAGE)_source
+	( cd $(BUILDTMP); zip -r $(PACKAGE)_source.zip $(PACKAGE)_source )
+	cp -v $(BUILDTMP)/$(PACKAGE)_source.zip $(BUILDDIR)/source
+	rm -rf $(BUILDTMP)
 
 .PHONY: upload
-upload: pristine all buildcp
-	rsync -rv -e ssh --delete build/* $(UPLOADDIR)
+upload: pristine all stage
+	rsync -rv -e ssh --delete $(BUILDDIR)/* $(BUILDDIR)/.htaccess $(UPLOADDIR)
+
+.PHONY: fastupload
+fastupload: all stage
+	rsync -rv -e ssh --delete $(BUILDDIR)/* $(BUILDDIR)/.htaccess $(UPLOADDIR)
 
 .PHONY: pristine
 pristine: clean
-	$(MAKE) -C builders $@
-	$(MAKE) -C examples $@
+	$(MAKE) -C src $@
+	$(MAKE) -C source $@
 	rm -rf $(BUILDDIR)
-	rm -f lib/*.pyc
 
 .PHONY: clean
 clean:
-	$(MAKE) -C builders $@
-	$(MAKE) -C examples $@
-	rm -f $(PACKAGE).valid
+	rm -rf 
+	$(MAKE) -C src $@
+	$(MAKE) -C source $@
 

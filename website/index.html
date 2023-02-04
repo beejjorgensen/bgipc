@@ -1,96 +1,157 @@
-<html>
+<!DOCTYPE html>
 
+<html lang="en">
 <head>
-	<meta name="Description" content="Beej's Guide to Unix Interprocess Communication">
-	<meta name="Keywords" content="unix interprocess communication">
-	<meta charset="utf-8">
-	<title>Beej's Guide to Unix IPC</title>
-	<link rel="icon" type="image/gif" href="/guide/favicon.gif"/>
-	<link rel="stylesheet" type="text/css" href="index.css"/>
+    <title>Beej's Guide to Interprocess Communications</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="Description" content="Beej's Guide to Interprocess Communication">
+    <meta name="Keywords" content="programming interprocess communication ipc">
+    <link rel="icon" type="image/gif" href="/guide/favicon.gif"/>
+    <link rel="stylesheet" type="text/css" href="index.css"/>
 </head>
 
 <body>
 
 <div class="center">
-	<div class="hr w50p"></div>
-	<div id="suggestive-sell">Like the guide? Pitch in!</div>
-	<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
-	<input type="hidden" name="cmd" value="_s-xclick">
-	<input type="image" src="https://www.paypal.com/en_US/i/btn/x-click-but04.gif" border="0" name="submit" alt="Make payments with PayPal - it's fast, free and secure!">
-	<input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----">
-	</form>
-	<div class="hr w50p"></div>
+	<div class="ib800">
+		<div class="center">
+			<div class="hr w100p"></div>
+			<div id="suggestive-sell">Like the guide? Pitch in!</div>
+			<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+			<input type="hidden" name="cmd" value="_s-xclick">
+			<input type="image" src="https://www.paypal.com/en_US/i/btn/x-click-but04.gif" border="0" name="submit" alt="Make payments with PayPal - it's fast, free and secure!">
+			<input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----">
+			</form>
+			<div class="hr w100p"></div>
+		</div>
+
+		<p>
+
+		<!--
+		<div class="center">
+			<div class="w100p ilb">
+				<div class="float-left mb2ex">
+					<a target="_blank" href="http://beej.us/guide/url/bgbuy">
+						<img border="0" src="bgipccover.png" alt="book cover image"/>
+					</a>
+				</div>
+
+				<div style="margin-top: 4ex;">
+					<a target="_blank" href="http://beej.us/guide/url/bgbuy">
+						<b><span class="bigfont">Buy the Guide as a Real Life
+						Perfect-Bound BOOK right now!</span></b>
+						<p>
+						<b><i>Holy Moly!</i></b>
+					</a>
+				</div>
+
+				<div class="clear-both"></div>
+
+			</div>
+		</div>
+		-->
+
+		<div class="left">
+			<h1 class="maintitle">Beej's Guide to Interprocess Communcation</h1>
+
+			(<a href="http://beej.us/guide/">Click here for other guides!</a>)
+
+			<h3 class="secttitle">What's Here for Readers:</h3>
+			<!--
+			<p><a href="errata.html">Errata</a> (mistakes?  What?)</p>
+			-->
+
+            <!--
+            Search the HTML guide: <span class="small">[<a
+            href="whynoddg.html">Why I don't use Bing (or
+            DuckDuckGo)</a>]</span>
+
+            <script async src="https://cse.google.com/cse.js?cx=ae3393718e443f40f">
+            </script>
+            <div class="gcse-search"></div>
+            -->
+
+			<b class="subsecttitle">HTML:</b>
+			<ul>
+			<li><a href="html/split/">HTML</a>
+			<li><a href="html/split-wide/">HTML, widescreen</a>
+			<p>
+			<li><a href="html/">HTML, single page</a>
+			<li><a href="html/index-wide.html">HTML, single page, widescreen</a>
+			<p>
+			<li><a href="html/bgipc.zip">HTML ZIP</a>
+			<li><a href="html/bgipc-wide.zip">HTML ZIP, widescreen</a>
+			</ul>
+			<p>
+
+			<b class="subsecttitle">PDF:</b>
+			<ul>
+			<li><a href="pdf/bgipc_usl_c_1.pdf">US Letter, one sided, syntax highlighting</a></li>
+			<li><a href="pdf/bgipc_usl_c_2.pdf">US Letter, two sided, syntax highlighting</a></li>
+			<li><a href="pdf/bgipc_a4_c_1.pdf">A4, one sided, syntax highlighting</a></li>
+			<li><a href="pdf/bgipc_a4_c_2.pdf">A4, two sided, syntax highlighting</a></li>
+			<li><a href="pdf/bgipc_usl_bw_1.pdf">US Letter, one sided, black and white</a></li>
+			<li><a href="pdf/bgipc_usl_bw_2.pdf">US Letter, two sided, black and white</a></li>
+			<li><a href="pdf/bgipc_a4_bw_1.pdf">A4, one sided, black and white</a></li>
+			<li><a href="pdf/bgipc_a4_bw_2.pdf">A4, two sided, black and white</a></li>
+			</ul>
+
+			<!--
+			<b class="subsecttitle">Examples:</b>
+			<p>
+			<ul>
+			<li><a href="source/">Loose C example downloads</a>	<i>(Run <tt>make</tt> to build.)</i>
+			<li><a href="source/bgipc_source.zip">ZIP file</a>
+			</ul>
+            -->
+
+			<!--
+			<p>
+
+			<h3 class="secttitle">Mirrors:</h3>
+			<i>Let me know if you have mirrored the site.</i>
+
+			<p>
+			<ul>
+			<li><a href="http://docs.hfbk.net/beej.us/">kfbk.net</a> (Germany)
+			<li><a href="http://retran.com/beej/">retran.com</a> (USA)
+			<li><a href="http://www.rainydayz.org/content/beejs-guides">rainydayz.org</a> (Great Britain)
+			</ul>
+
+			<p>
+			-->
+
+			<!--
+			<h3 class="secttitle">Translations!</h3>
+			<i>Let me know if you have made a translation that I should link to.</i>
+
+			<p>
+
+			<ul>
+			<li><a href="http://www.fatcow.com/edu/bgipc-be/">Belorussian</a>
+			</ul>
+
+			<p><b>Broken translation links</b>
+			<p><i>Let me know if you have updates.</i>
+
+			<ul>
+			</ul>
+
+			<p>
+			-->
+
+			<h3 class="secttitle">What's Here for Translators and Writers:</h3>
+
+			<p>Clone the whole thing from <a
+			href="https://github.com/beejjorgensen/bgipc">GitHub</a> and follow the
+			<tt>README</tt>.
+
+			<hr class="singleline">
+			Contact Beej: <tt class="email"><a href="mailto:beej@beej.us">beej@beej.us</a></tt>
+		</div>
+	</div>
 </div>
-			
-
-<h1 class="maintitle">Beej's Guide to Unix Interprocess Communication</h1>
-
-<p>
-(<a href="http://beej.us/guide/">Click here for other guides!</a>)
-
-
-<p>As long as you know some <a href="http://beej.us/guide/bgc/">C</a> or
-C++, this guide should springboard you into the realm of Unix IPC with
-hopefully as little hassle as humanly possible!
-
-<p>
-
-<h3 class="secttitle">What's Here for Readers:</h3>
-<b class="subsecttitle">HTML:</b>
-<ul>
-<li><a href="html/multi/index.html"><b>One section per page</b></a> (read online)
-<li><a href="html/single/bgipc.html">All on one page</a> (read online)
-<p>
-<li><a href="html/archive/bgipc_multipage.tgz">One section per page</a> (tarball for download)
-<li><a href="html/archive/bgipc_multipage.zip">One section per page</a> (zipfile for download)
-<li><a href="html/archive/bgipc_singlepage.tgz">All on one page</a> (tarball for download)
-<li><a href="html/archive/bgipc_singlepage.zip">All on one page</a> (zipfile for download)
-</ul>
-<p>
-
-<b class="subsecttitle">PDF:</b>
-<ul>
-<li><a href="pdf/bgipc_USLetter.pdf">US Letter, one sided</a>
-<li><a href="pdf/bgipc_USLetter_2.pdf">US Letter, two sided</a>
-<li><a href="pdf/bgipc_A4.pdf">A4, one sided</a>
-<li><a href="pdf/bgipc_A4_2.pdf">A4, two sided</a>
-</ul>
-<p>
-
-<br/>
-
-<h3 class="secttitle">Mirrors:</h3>
-<i>Let me know if you have mirrored the site.</i>
-
-<p>
-<ul>
-<li><a href="http://retran.com/beej/">retran.com</a> (USA)
-</ul>
-
-<p>
-
-<h3 class="secttitle">Translations:</h3>
-<i>Let me know if you have made a translation that I should link to.</i>
-
-<p>
-
-<ul>
-<li><a href="http://www.chez.com/vidalc/lf/socket.html">French</a>
-<li><a href="http://kldp.org/Translations/html/Socket_Programming-KLDP/Socket_Programming-KLDP.html">Korean</a>
-<li><a href="http://users.teol.net/~mvlado/sockets/">Serbian</a>
-</ul>
-
-<p>
-
-<h3 class="secttitle">What's Here for Translators and Writers:</h3>
-
-<p>Clone the whole thing from <a
-href="https://github.com/beejjorgensen/bgipc">GitHub</a> and follow the
-<tt>README</tt>.
-		
-
-<hr class="singleline">
-Contact Beej: <tt class="email"><a href="mailto:beej@beej.us">beej@beej.us</a></tt>
 
 </html>
 
