@@ -105,8 +105,7 @@ do normal set operations to manipulate them: `sigemptyset()`,
 this example, we'll just clear the set and not block any other signals.
 
 Examples always help! Here's one that handled `SIGINT`, which can be
-delivered by hitting `^C`, called `<ulink
-url="&samplepre;sigint.c">sigint.c</ulink>`:
+delivered by hitting `^C`, called [flx[`sigint.c`|sigint.c]]:
 
 ``` {.c .numberLines}
 #include <stdio.h>
@@ -251,7 +250,7 @@ and type `volatile sig_atomic_t`.
 
 Here's an example that handles `SIGUSR1` by setting a global flag, which
 is then examined in the main loop to see if the handler was called.
-This is `<ulink url="&samplepre;sigusr.c">sigusr.c</ulink>`:
+This is [flx[`sigusr.c`|sigusr.c]]:
 
 ``` {.c .numberLines}
 #include <stdio.h>
@@ -377,32 +376,33 @@ more information:
 
 Handling signals:
 
-<ulink url="&pmanpre;sigaction&pmanpost;">`sigaction()`</ulink>
-<ulink url="&pmanpre;sigwait&pmanpost;">`sigwait()`</ulink>
-<ulink url="&pmanpre;sigwaitinfo&pmanpost;">`sigwaitinfo()`</ulink>
-<ulink url="&pmanpre;sigtimedwait&pmanpost;">`sigtimedwait()`</ulink>
-<ulink url="&pmanpre;sigsuspend&pmanpost;">`sigsuspend()`</ulink>
-<ulink url="&pmanpre;sigpending&pmanpost;">`sigpending()`</ulink>
+[flm[`sigaction()`|sigaction.2]]
+[flm[`sigwait()`|sigwait.3]]
+[flm[`sigwaitinfo()`|sigwaitinfo.2]]
+[flm[`sigtimedwait()`|sigtimedwait.2]]
+[flm[`sigsuspend()`|sigsuspend.2]]
+[flm[`sigpending()`|sigpending.2]]
 
 Delivering signals:
 
-<ulink url="&pmanpre;kill&pmanpost;">`kill()`</ulink>
-<ulink url="&pmanpre;raise&pmanpost;">`raise()`</ulink>
-<ulink url="&pmanpre;sigqueue&pmanpost;">`sigqueue()`</ulink>
+[flm[`kill()`|kill.2]]
+[flm[`raise()`|raise.3]]
+[flm[`sigqueue()`|sigqueue.3]]
 
 Set operations:
 
-<ulink url="&pmanpre;sigemptyset&pmanpost;">`sigemptyset()`</ulink>
-<ulink url="&pmanpre;sigfillset&pmanpost;">`sigfillset()`</ulink>
-<ulink url="&pmanpre;sigaddset&pmanpost;">`sigaddset()`</ulink>
-<ulink url="&pmanpre;sigdelset&pmanpost;">`sigdelset()`</ulink>
-<ulink url="&pmanpre;sigismember&pmanpost;">`sigismember()`</ulink>
+[flm[`sigemptyset()`|sigemptyset.3]]
+[flm[`sigfillset()`|sigfillset.3]]
+[flm[`sigaddset()`|sigaddset.3]]
+[flm[`sigdelset()`|sigdelset.3]]
+[flm[`sigismember()`|sigismember.3]]
 
 Other:
 
-<ulink url="&pmanpre;sigprocmask&pmanpost;">`sigprocmask()`</ulink>
-<ulink url="&pmanpre;sigaltstack&pmanpost;">`sigaltstack()`</ulink>
-<ulink url="&pmanpre;siginterrupt&pmanpost;">`siginterrupt()`</ulink>
-<ulink url="&pmanpre;sigsetjmp&pmanpost;">`sigsetjmp()`</ulink>
-<ulink url="&pmanpre;siglongjmp&pmanpost;">`siglongjmp()`</ulink>
-<ulink url="&pmanpre;signal&pmanpost;">`signal()`</ulink>
+[flm[`sigprocmask()`|sigprocmask.2]]
+[flm[`sigaltstack()`|sigaltstack.2]]
+[flm[`siginterrupt()`|siginterrupt.3]]
+[flm[`sigsetjmp()`|sigsetjmp.3]]
+[flm[`siglongjmp()`|siglongjmp.3]]
+[flm[`signal()`|signal.2]]
+

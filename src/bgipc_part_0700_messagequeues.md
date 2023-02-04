@@ -7,7 +7,7 @@
 <!-- Message Queues -->
 <!-- ======================================================= -->
 
-# Message Queues
+# Message Queues {#mq}
 
 Those people who brought us System V have seen fit to include some IPC
 goodies that have been implemented on various platforms (including
@@ -17,14 +17,14 @@ POSIX version of each of these; see _mq_overview_, _sem_overview_, and
 _shm_overview_ in the man pages.
 
 As usual, I want to spew some overview at you before getting into the
-nitty-gritty. A message queue works kind of like a <link
-dest="fifos">FIFO</link>, but supports some additional functionality.
-Generally, see, messages are taken off the queue in the order they are
-put on. Specifically, however, there are ways to pull certain messages
-out of the queue before they reach the front. It's like cutting in line.
-(Incidentally, don't try to cut in line while visiting the Great America
-amusement park in Silicon Valley, as you can be arrested for it.  They
-take cutting _very_ seriously down there.)
+nitty-gritty. A message queue works kind of like a [FIFO](#fifos), but
+supports some additional functionality. Generally, see, messages are
+taken off the queue in the order they are put on. Specifically, however,
+there are ways to pull certain messages out of the queue before they
+reach the front. It's like cutting in line. (Incidentally, don't try to
+cut in line while visiting the Great America amusement park in Silicon
+Valley, as you can be arrested for it.  They take cutting _very_
+seriously down there.)
 
 In terms of usage, a process can create a new message queue, or it can
 connect to an existing one. In this, the latter, way two processes can
@@ -210,10 +210,10 @@ section.
 
 ## Receiving from the queue
 
-Now that we have the dreaded pirate <ulink url="&lolonais;">Francis
-L'Olonais</ulink> stuck in our message queue, how do we get him out? As
-you can imagine, there is a counterpart to `msgsnd()`: it is `msgrcv()`.
-How imaginative.
+Now that we have the dreaded pirate [Francis
+L'Olonais](https://beej.us/pirates/pirate_view.php?file=lolonais.jpg)
+stuck in our message queue, how do we get him out? As you can imagine,
+there is a counterpart to `msgsnd()`: it is `msgrcv()`. How imaginative.
 
 A call to `msgrcv()` that would do it looks something like this:
 
@@ -309,7 +309,7 @@ For the sake of completeness, I'll include a brace of programs that will
 communicate using message queues. The first, `kirk.c` adds messages to
 the message queue, and `spock.c` retrieves them.
 
-Here is the source for <ulink url="&samplepre;kirk.c">kirk.c</ulink>:
+Here is the source for [flx[`kirk.c`|kirk.c]]:
 
 ``` {.c .numberLines}
 #include <stdio.h>
@@ -368,7 +368,7 @@ The way `kirk` works is that it allows you to enter lines of text. Each
 line is bundled into a message and added to the message queue. The
 message queue is then read by `spock`.
 
-Here is the source for <ulink url="&samplepre;spock.c">spock.c</ulink>:
+Here is the source for [flx[`spock.c`|spock.c]]:
 
 ``` {.c .numberLines}
 #include <stdio.h>

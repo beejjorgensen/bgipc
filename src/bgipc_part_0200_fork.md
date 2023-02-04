@@ -103,8 +103,7 @@ process, which deals with them heavy-handedly.
 
 ## `"I'm mentally prepared! Give me _The Button_!"
 
-Right! Here's an <ulink url="&samplepre;fork1.c">example</ulink> of how
-to use `fork()`:
+Right! Here's an [flx[example|fork1.c]] of how to use `fork()`:
 
 ``` {.c .numberLines}
 #include <stdio.h>

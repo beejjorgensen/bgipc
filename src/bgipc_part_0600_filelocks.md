@@ -157,7 +157,7 @@ arguments, it tries to grab a write lock (`F_WRLCK`) on its source
 (`lockdemo.c`). If you start it with any command line arguments at all,
 it tries to get a read lock (`F_RDLCK`) on it.
 
-<ulink url="&samplepre;lockdemo.c">Here's the source</ulink>:
+[flx[Here's the source|lockdemo.c]]:
 
 ``` {.c .numberLines}
 #include <stdio.h>
@@ -237,8 +237,8 @@ picture---well, I've heard about them.
 
 Locks rule. Sometimes, though, you might need more control over your
 processes in a producer-consumer situation. For this reason, if no
-other, you should see the document on System V <link
-dest="semaphores">semaphores</link> (or POSIX, for that matter; they
-aren't identical) if your system supports such a beast. They provide a
-more extensive and at least equally function equivalent to file locks.
+other, you should see the document on System V [semaphores](#semaphores)
+(or POSIX, for that matter; they aren't identical) if your system
+supports such a beast. They provide a more extensive and at least
+equally function equivalent to file locks.
 

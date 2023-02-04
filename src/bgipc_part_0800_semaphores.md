@@ -9,13 +9,13 @@
 
 # Semaphores {#semaphores}
 
-Remember <link dest="flocking">file locking</link>? Well, semaphores can
-be thought of as really generic advisory locking mechanisms. You can use
-them to control access to files, <link dest="shm">shared memory</link>,
-and, well, just about anything you want. The basic functionality of a
-semaphore is that you can either set it, check it, or wait until it
-clears then set it ("test-n-set"). No matter how complex the stuff that
-follows gets, remember those three operations.
+Remember [file locking](#flocking)? Well, semaphores can be thought of
+as really generic advisory locking mechanisms. You can use them to
+control access to files, [shared memory](#shm), and, well, just about
+anything you want. The basic functionality of a semaphore is that you
+can either set it, check it, or wait until it clears then set it
+("test-n-set"). No matter how complex the stuff that follows gets,
+remember those three operations.
 
 This document will provide an overview of semaphore functionality, and
 will end with a program that uses semaphores to control access to a
@@ -47,8 +47,7 @@ int semget(key_t key, int nsems, int semflg);
 
 What's the `key`? It's a unique identifier that is used by different
 processes to identify this semaphore set. (This `key` will be generated
-using `ftok()`, described in the <link dest="mqftok">Message Queues
-section</link>.)
+using `ftok()`, described in the [Message Queues section](#mqftok).)
 
 The next argument, `nsems`, is (you guessed it!) the number of
 semaphores in this semaphore set. The maximum number is system
@@ -108,9 +107,9 @@ and look at the `sem_otime` member of the returned `struct semid_ds`
 structure. If that's non-zero, it means process 1 has performed an
 operation on the semaphore with `semop()`, presumably to initialize it.
 
-For an example of this, see the demonstration program <link
-dest="semsamp">`semdemo.c`</link>, below, in which I generally
-reimplement <ulink url="&unpurl;">Stevens' code</ulink>.
+For an example of this, see the demonstration program
+[flx[`semdemo.c`|semdemo.c]], below, in which I generally reimplement
+[Stevens's code](http://www.kohala.com/start/unpv22e/unpv22e.html).
 
 In the meantime, let's hop to the next section and take a look at how to
 initialize our freshly-minted semaphores.

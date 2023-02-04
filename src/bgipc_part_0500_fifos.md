@@ -10,9 +10,9 @@
 # FIFOs {#fifos}
 
 A FIFO ("First In, First Out", pronounced "Fy-Foh") is sometimes known
-as a _named pipe_. That is, it's like a <link dest="pipes">pipe</link>,
-except that it has a name! In this case, the name is that of a file that
-multiple processes can `open()` and read and write to.
+as a _named pipe_. That is, it's like a [pipe](#pipes), except that it
+has a name! In this case, the name is that of a file that multiple
+processes can `open()` and read and write to.
 
 This latter aspect of FIFOs is designed to let them get around one of
 the shortcomings of normal pipes: you can't grab one end of a normal
@@ -56,7 +56,7 @@ belly, I'll present here two programs which will send data through a
 FIFO. One is `speak.c` which sends data through the FIFO, and the other
 is called `tick.c`, as it sucks data out of the FIFO.
 
-Here is `<ulink url="&samplepre;speak.c">speak.c</ulink>`:
+Here is [flx[`speak.c`|speak.c]]:
 
 ``` {.c .numberLines}
 #include <stdio.h>
@@ -95,9 +95,8 @@ int main(void)
 What `speak` does is create the FIFO, then try to `open()` it. Now, what
 will happen is that the `open()` call will _block_ until some other
 process opens the other end of the pipe for reading. (There is a way
-around this---see <link dest="fifondelay">`O_NDELAY`</link>, below.)
-That process is `<ulink url="&samplepre;tick.c">tick.c</ulink>`, shown
-here:
+around this---see [`O_NDELAY`](#fifondelay), below.) That process is
+[flx[`tick.c`|tick.c]], shown here:
 
 ``` {.c .numberLines}
 #include <stdio.h>
@@ -165,7 +164,7 @@ happen. Sometimes one of the readers get everything. Sometimes it
 alternates between readers. Why do you want to have multiple readers,
 anyway?
 
-## `O_NDELAY`! I'm UNSTOPPABLE!
+## `O_NDELAY`! I'm UNSTOPPABLE! {#fifondelay}
 
 Earlier, I mentioned that you could get around the blocking `open()`
 call if there was no corresponding reader or writer. The way to do this
@@ -193,5 +192,5 @@ Having the name of the pipe right there on disk sure makes it easier,
 doesn't it? Unrelated processes can communicate via pipes! (This is an
 ability you will find yourself wishing for if you use normal pipes for
 too long.)  Still, though, the functionality of pipes might not be quite
-what you need for your applications. <link dest="mq">Message
-queues</link> might be more your speed, if your system supports them.
+what you need for your applications. [Message queues](#mq) might be more
+your speed, if your system supports them.

@@ -43,9 +43,9 @@ documents are for you. If you aren't that good, well, don't sweat
 it---you'll be able to figure it out. I make the assumption, however,
 that you have a fair smattering of C programming experience.
 
-As with <ulink url="&bgneturl;">Beej's Guide to Network Programming
-Using Internet Sockets</ulink>, these documents are meant to springboard
-the aforementioned user into the realm of IPC by delivering a concise
+As with [flbg[Beej's Guide to Network Programming Using Internet
+Sockets|bgnet]], these documents are meant to springboard the
+aforementioned user into the realm of IPC by delivering a concise
 overview of various IPC techniques. This is not the definitive set of
 documents that cover this subject, by any means. Like I said, it is
 designed to simply give you a foothold in this, the exciting world of
@@ -64,8 +64,8 @@ They should compile anywhere a good Unix compiler is available.
 <!-- ======================================================= -->
 ## Official Homepage
 
-This official location of this document is `<ulink url="&homepage;"
-footnote="n">&homepage;</ulink>`.
+This official location of this document is
+[flbg[`https://beej.us/guide/bgipc/`|bgipc]].
 
 <!-- ======================================================= -->
 <!-- Email policy -->
@@ -83,9 +83,7 @@ As a rule, the more complex the question, the less likely I am to
 respond. If you can narrow down your question before mailing it and be
 sure to include any pertinent information (like platform, compiler,
 error messages you're getting, and anything else you think might help me
-troubleshoot), you're much more likely to get a response. For more
-pointers, read ESR's document, <ulink url="&esrsmartqs;">How To Ask
-Questions The Smart Way</ulink>.
+troubleshoot), you're much more likely to get a response.
 
 If you don't get a response, hack on it some more, try to find the
 answer, and if it's still elusive, then write me again with the
