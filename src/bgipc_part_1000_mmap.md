@@ -131,7 +131,7 @@ file info, one field of which is the size in bytes. Easy enough.
 
 Here is the source for [flx[`mmapdemo.c`|mmapdemo.c]]:
 
-``` {.c}
+``` {.c .numberLines}
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>

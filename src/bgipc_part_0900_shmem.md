@@ -213,7 +213,7 @@ shared memory segment.
 
 Here's the code for [flx[`shmdemo.c`|shmdemo.c]]:
 
-``` {.c}
+``` {.c .numberLines}
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

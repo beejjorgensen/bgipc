@@ -92,7 +92,7 @@ to restore the previous signal handler at a later time.
 We'll focus on these three fields in the `struct sigaction`:
 
 |Signal|Description|
-|-|-|
+|------------|----------------------------------------------------------|
 |`sa_handler`|The signal handler function (or `SIG_IGN` to ignore the signal)|
 |`sa_mask`|A set of signals to block while this one is being handled||
 |`sa_flags`|Flags to modify the behavior of the handler, or `0`||
@@ -376,33 +376,33 @@ more information:
 
 Handling signals:
 
-[flm[`sigaction()`|sigaction.2]]
-[flm[`sigwait()`|sigwait.3]]
-[flm[`sigwaitinfo()`|sigwaitinfo.2]]
-[flm[`sigtimedwait()`|sigtimedwait.2]]
-[flm[`sigsuspend()`|sigsuspend.2]]
-[flm[`sigpending()`|sigpending.2]]
+* [flm[`sigaction()`|sigaction.2]]
+* [flm[`sigwait()`|sigwait.3]]
+* [flm[`sigwaitinfo()`|sigwaitinfo.2]]
+* [flm[`sigtimedwait()`|sigtimedwait.2]]
+* [flm[`sigsuspend()`|sigsuspend.2]]
+* [flm[`sigpending()`|sigpending.2]]
 
 Delivering signals:
 
-[flm[`kill()`|kill.2]]
-[flm[`raise()`|raise.3]]
-[flm[`sigqueue()`|sigqueue.3]]
+* [flm[`kill()`|kill.2]]
+* [flm[`raise()`|raise.3]]
+* [flm[`sigqueue()`|sigqueue.3]]
 
 Set operations:
 
-[flm[`sigemptyset()`|sigemptyset.3]]
-[flm[`sigfillset()`|sigfillset.3]]
-[flm[`sigaddset()`|sigaddset.3]]
-[flm[`sigdelset()`|sigdelset.3]]
-[flm[`sigismember()`|sigismember.3]]
+* [flm[`sigemptyset()`|sigemptyset.3]]
+* [flm[`sigfillset()`|sigfillset.3]]
+* [flm[`sigaddset()`|sigaddset.3]]
+* [flm[`sigdelset()`|sigdelset.3]]
+* [flm[`sigismember()`|sigismember.3]]
 
 Other:
 
-[flm[`sigprocmask()`|sigprocmask.2]]
-[flm[`sigaltstack()`|sigaltstack.2]]
-[flm[`siginterrupt()`|siginterrupt.3]]
-[flm[`sigsetjmp()`|sigsetjmp.3]]
-[flm[`siglongjmp()`|siglongjmp.3]]
-[flm[`signal()`|signal.2]]
+* [flm[`sigprocmask()`|sigprocmask.2]]
+* [flm[`sigaltstack()`|sigaltstack.2]]
+* [flm[`siginterrupt()`|siginterrupt.3]]
+* [flm[`sigsetjmp()`|sigsetjmp.3]]
+* [flm[`siglongjmp()`|siglongjmp.3]]
+* [flm[`signal()`|signal.2]]
 

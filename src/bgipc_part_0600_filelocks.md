@@ -77,7 +77,7 @@ in it are used to _describe_ the locking action taking place.  Here are
 some field definitions:
 
 |Field|Description|
-|:-:|-|
+|:------:|-------------------------------------------------------------|
 |`l_type`|This is where you signify the type of lock you want to set. It's either `F_RDLCK`, `F_WRLCK`, or `F_UNLCK` if you want to set a read lock, write lock, or clear the lock, respectively.|
 |`l_whence`|This field determines where the `l_start` field starts from (it's like an offset for the offset). It can be either `SEEK_SET`, `SEEK_CUR`, or `SEEK_END`, for beginning of file, current file position, or end of file.|
 |`l_start`|This is the starting offset in bytes of the lock, relative to `l_whence`.|

@@ -131,7 +131,7 @@ Anyway, this example is just like the previous one, except now we
 parent reads from it. The resultant output will be something similar to
 the following:
 
-```
+``` {.default}
 PARENT: reading from pipe
  CHILD: writing to the pipe
  CHILD: exiting

@@ -247,7 +247,7 @@ Actually, the behavior of `msgrcv()` can be modified drastically by
 choosing a `msgtyp` that is positive, negative, or zero:
 
 |`msgtyp`|Effect on `msgrcv()`|
-|:-:|-|
+|:------:|-------------------------------------------------------------|
 |Zero|Retrieve the next message on the queue, regardless of its `mtype`.|
 |Positive|Get the next message with an `mtype` _equal to_ the specified `msgtyp`.|
 |Negative|Retrieve the first message on the queue whose `mtype` field is less than or equal to the absolute value of the `msgtyp` argument.|

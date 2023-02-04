@@ -11,6 +11,7 @@
 #include <sys/sem.h>
 
 #define MAX_RETRIES 10
+#define NEED_SEMUN
 
 #ifdef NEED_SEMUN
 /* Defined in sys/sem.h as required by POSIX now */

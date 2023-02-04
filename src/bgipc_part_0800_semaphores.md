@@ -126,8 +126,8 @@ function `semctl()` allows you to do atomic value changes to individual
 semaphores or complete sets of semaphores.
 
 ``` {.c}
-int semctl(int semid, int semnum,
-           int cmd, ... /*arg*/);
+int semctl(int semid, int semnum, int cmd, ... /*arg*/);
+```
 
 `semid` is the semaphore set id that you get from your call to
 `semget()`, earlier. `semnum` is the ID of the semaphore that you wish
@@ -154,7 +154,7 @@ of the `cmd` parameter to `semctl()` (a partial list follows---see your
 local man page for more):
 
 |`cmd`|Effect|
-|:-:|-|
+|:--------:|----------------------------------------------------------|
 |`SETVAL`|Set the value of the specified semaphore to the value in the `val` member of the passed-in `union semun`.|
 |`GETVAL`|Return the value of the given semaphore.|
 |`SETALL`|Set the values of all the semaphores in the set to the values in the array pointed to by the `array` member of the passed-in `union semun`. The `semnum` parameter to `semctl()` isn't used.<|
@@ -205,7 +205,7 @@ semaphore. This takes on different meanings, depending on whether
 table:
 
 |`sem_op`|What happens|
-|:-:|-|
+|:------:|--------------------------------------------------------------|
 |Negative|Allocate resources. Block the calling process until the value of the semaphore is greater than or equal to the absolute value of `sem_op`. (That is, wait until enough resources have been freed by other processes for this one to allocate.)  Then add (effectively subtract, since it's negative) the value of `sem_op` to the semaphore's value.|
 |Positive|Release resources. The value of `sem_op` is added to the semaphore's value.|
 |Zero|This process will wait until the semaphore in question reaches 0.|
@@ -295,7 +295,7 @@ Here's [flx[`semdemo.c`|semdemo.c]], including a function named
 `initsem()` that gets around the semaphore race conditions,
 Stevens-style:
 
-``` {.c}
+``` {.c .numberLines}
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -421,7 +421,7 @@ int main(void)
 Here's [flx[`semrm.c`|semrm.c]] for removing the semaphore when you're
 done:
 
-``` {.c}
+``` {.c .numberLines}
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
