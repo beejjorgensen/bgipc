@@ -7,7 +7,7 @@
 <!-- FIFOs -->
 <!-- ======================================================= -->
 
-# FIFOs
+# FIFOs {#fifos}
 
 A FIFO ("First In, First Out", pronounced "Fy-Foh") is sometimes known
 as a _named pipe_. That is, it's like a <link dest="pipes">pipe</link>,
