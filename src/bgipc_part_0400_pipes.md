@@ -144,7 +144,7 @@ sleep, until data arrives to be read. It seems that the parent tried to
 read, went to sleep, the child wrote and exited, and the parent woke up
 and read the data.
 
-Hurrah!! You've just don't some interprocess communication! That was
+Hurrah!! You've just done some interprocess communication! That was
 dreadfully simple, huh? I'll bet you are still thinking that there
 aren't many uses for `pipe()` and, well, you're probably right. The
 other forms of IPC are generally more useful and are often more exotic.
