@@ -85,7 +85,7 @@ you could easily write a loop that fills up the process table with
 defunct processes owned by `init`. Wouldn't that make your sysadmin
 happy?
 
-Your mission: make sure your parent process either ignores `SIGHCLD`, or
+Your mission: make sure your parent process either ignores `SIGCHLD`, or
 `wait()`s for all the children it `fork()`s. Well, you don't _always_
 have to do that (like if you're starting a daemon or something), but you
 code with caution if you're a `fork()` novice. Otherwise, feel free to
