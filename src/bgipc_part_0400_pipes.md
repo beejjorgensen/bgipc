@@ -98,6 +98,7 @@ read-end. [flx[Like this|pipe2.c]]:
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 int main(void)
