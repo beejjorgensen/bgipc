@@ -73,7 +73,7 @@ Here's the `sigaction()` breakdown:
 
 ``` {.c}
 int sigaction(int sig, const struct sigaction *act,
-              struct sigaction *oact);</code>
+              struct sigaction *oact);
 ```
 
 The first parameter, `sig` is which signal to catch. This can be
@@ -185,7 +185,7 @@ Instead of using `goto` like that, you might be able to set your
 `SIGINT` handler code to look like this:
 
 ``` {.c}
-    sa.sa_flags = SA_RESTART;</code>
+    sa.sa_flags = SA_RESTART;
 ```
 
 Then our run looks more like this:
