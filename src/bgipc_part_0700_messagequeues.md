@@ -144,7 +144,7 @@ simple, my friends: just use `msgsnd()`:
 
 ``` {.c}
 int msgsnd(int msqid, const void *msgp,
-           size_t msgsz, int msgflg);</code>
+           size_t msgsz, int msgflg);
 ```
 
 `msqid` is the message queue identifier returned by `msgget()`. The

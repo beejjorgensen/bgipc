@@ -136,7 +136,7 @@ fcntl(fd, F_SETLKW, &fl);  /* set the lock, waiting if necessary */
 .
 .
 .
-fl.l_type   = <b>F_UNLCK</b>;  /* tell it to unlock the region */
+fl.l_type   = F_UNLCK;  /* tell it to unlock the region */
 fcntl(fd, F_SETLK, &fl); /* set the region to unlocked */
 ```
 
