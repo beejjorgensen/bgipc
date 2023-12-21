@@ -207,5 +207,5 @@ don't care what the return value of the child is: you just call it with
 ## Summary
 
 Now you know all about the mighty `fork()` function! It's more useful
-that a wet bag of worms in most computationally intensive situations,
+than a wet bag of worms in most computationally intensive situations,
 and you can amaze your friends at parties. I swear. Try it.
