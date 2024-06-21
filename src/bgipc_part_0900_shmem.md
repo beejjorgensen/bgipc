@@ -89,7 +89,7 @@ char *data;
 
 key = ftok("/home/beej/somefile3", 'R');
 shmid = shmget(key, 1024, 0644 | IPC_CREAT);
-data = shmat(shmid, (void *)0, 0);</code>
+data = shmat(shmid, (void *)0, 0);
 ```
 
 And _bammo_! You have the pointer to the shared memory segment! Notice
