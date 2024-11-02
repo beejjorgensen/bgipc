@@ -43,7 +43,7 @@ written to the pipe, and read from the other end in the order it came
 in. On many systems, pipes will fill up after you write about 10K to
 them without reading anything out.
 
-As a [flx[useless example|pipe1.c], the following program creates,
+As a [flx[useless example|pipe1.c]], the following program creates,
 writes to, and reads from a pipe.
 
 ``` {.c .numberLines}
