@@ -91,7 +91,7 @@ have to do that (like if you're starting a daemon or something), but you
 code with caution if you're a `fork()` novice. Otherwise, feel free to
 blast off into the stratosphere.
 
-To summerize: children become defunct until the parent `wait()`s, unless
+To summarize: children become defunct until the parent `wait()`s, unless
 the parent is ignoring `SIGCHLD`. Furthermore, children (living or
 defunct) whose parents die without `wait()`ing for them (again assuming
 the parent is not ignoring `SIGCHLD`) become children of the `init`
