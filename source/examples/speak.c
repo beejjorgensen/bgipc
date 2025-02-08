@@ -18,7 +18,7 @@ int main(void)
 	char s[300];
 	int num, fd;
 
-	mknod(FIFO_NAME, S_IFIFO | 0666, 0);
+	mkfifo(FIFO_NAME, 0644);
 
 	printf("waiting for readers...\n");
 	fd = open(FIFO_NAME, O_WRONLY);

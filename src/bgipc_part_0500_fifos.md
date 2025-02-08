@@ -27,24 +27,36 @@ can simply `open()` the pipe and transfer data through it.
 
 Since the FIFO is actually a file on disk, you have to do some
 fancy-schmancy stuff to create it. It's not that hard. You just have to
-call `mknod()` with the proper arguments. Here is a `mknod()` call that
-creates a FIFO:
+call `mkfifo()` with the proper arguments. Here is a `mkfifo()` call
+that creates a FIFO:
 
 ``` {.c}
-mknod("myfifo", S_IFIFO | 0644 , 0);
+mkfifo("myfifo", 0644);
 ```
 
 In the above example, the FIFO file will be called "`myfifo`". The
-second argument is the creation mode, which is used to tell `mknod()` to
-make a FIFO (the `S_IFIFO` part of the OR) and sets access permissions
-to that file (octal 644, or `rw-r--r--`) which can also be set by ORing
-together macros from `sys/stat.h`. This permission is just like the one
-you'd set using the `chmod` command. Finally, a device number is passed.
-This is ignored when creating a FIFO, so you can put anything you want
-in there.
+second argument is the creation mode, which is used to tell `mkfifo()`
+to make a FIFO (the `S_IFIFO` part of the OR) and sets access
+permissions to that file (octal 644, or `rw-r--r--`) which can also be
+set by ORing together macros from `sys/stat.h`. This permission is just
+like the one you'd set using the `chmod` command. Finally, a device
+number is passed. This is ignored when creating a FIFO, so you can put
+anything you want in there.
 
 (An aside: a FIFO can also be created from the command line using the
-Unix `mknod` command.)
+Unix `mkfifo` command.)
+
+### A Historical Note: `mknod`
+
+The original way to make a FIFO was with `mknod()`, but this is
+deprecated. For now, these two calls are equivalent:
+
+``` {.c}
+mknod("myfifo", S_IFIFO | 0644, 0);   // old way
+mkfifo("myfifo", 0644);               // new way
+```
+
+But you should use `mkfifo()` to make FIFOs if your system supports it.
 
 ## Producers and Consumers
 
@@ -75,7 +87,7 @@ int main(void)
     char s[300];
     int num, fd;
 
-    mknod(FIFO_NAME, S_IFIFO | 0666, 0);
+    mkfifo(FIFO_NAME, 0644);
 
     printf("waiting for readers...\n");
     fd = open(FIFO_NAME, O_WRONLY);
@@ -115,7 +127,7 @@ int main(void)
     char s[300];
     int num, fd;
 
-    mknod(FIFO_NAME, S_IFIFO | 0666, 0);
+    mkfifo(FIFO_NAME, 0644);
 
     printf("waiting for writers...\n");
     fd = open(FIFO_NAME, O_RDONLY);
