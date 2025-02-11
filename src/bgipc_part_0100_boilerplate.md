@@ -1,5 +1,5 @@
+# Intro
 <!-- Beej's guide to IPC
-
 # vim: ts=4:sw=4:nosi:et:tw=72
 -->
 
@@ -9,8 +9,6 @@
 <!-- ======================================================= -->
 <!-- Introduction -->
 <!-- ======================================================= -->
-
-# Intro
 
 You know what's easy? `fork()` is easy. You can fork off new processes
 all day and have them deal with individual chunks of a problem in
