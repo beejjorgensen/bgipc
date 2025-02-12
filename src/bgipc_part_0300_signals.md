@@ -94,8 +94,8 @@ We'll focus on these three fields in the `struct sigaction`:
 |Signal|Description|
 |------------|----------------------------------------------------------|
 |`sa_handler`|The signal handler function (or `SIG_IGN` to ignore the signal)|
-|`sa_mask`|A set of signals to block while this one is being handled||
-|`sa_flags`|Flags to modify the behavior of the handler, or `0`||
+|`sa_mask`|A set of signals to block while this one is being handled|
+|`sa_flags`|Flags to modify the behavior of the handler, or `0`|
 
 What about that `sa_mask` field? When you're handling a signal, you
 might want to block other signals from being delivered, and you can do
