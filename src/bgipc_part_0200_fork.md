@@ -101,7 +101,7 @@ process, which deals with them heavy-handedly.
 <!-- "I'm mentally prepared! Give me The Button!" -->
 <!-- ======================================================= -->
 
-## `"I'm mentally prepared! Give me _The Button_!"
+## "I'm mentally prepared! Give me _The Button_!"
 
 Right! Here's an [flx[example|fork1.c]] of how to use `fork()`:
 
