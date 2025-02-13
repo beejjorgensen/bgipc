@@ -34,12 +34,12 @@ you want (or nothing at all!)  You could have your process `printf()`
 So now you know that you can have your process respond to just about any
 signal in just about any way you want. Naturally, there are exceptions
 because otherwise it would be too easy to understand. Take the ever
-popular `SIGKILL`, signal #9. Have you ever typed "`kill -9 _nnnn_`" to
-kill a runaway process? You were sending it `SIGKILL`. Now you might
-also remember that no process can get out of a "`kill -9`", and you
-would be correct. `SIGKILL` is one of the signals you `can't` add your
-own signal handler for. The aforementioned `SIGSTOP` is also in this
-category.
+popular `SIGKILL`, signal #9. Have you ever typed "`kill -9 nnnn`" to
+kill a runaway process number `nnnn`? You were sending it `SIGKILL`. Now
+you might also remember that no process can get out of a "`kill -9`",
+and you would be correct. `SIGKILL` is one of the signals you `can't`
+add your own signal handler for. The aforementioned `SIGSTOP` is also in
+this category.
 
 (Aside: you often use the Unix "`kill`" command without specifying a
 signal to send...so what signal is it? The answer: `SIGTERM`. You can
@@ -53,7 +53,7 @@ signals that aren't reserved: `SIGUSR1` and `SIGUSR2`. You are free to
 use these for whatever you want and handle them in whatever way you
 choose. (For example, my cd player program might respond to `SIGUSR1` by
 advancing to the next track. In this way, I could control it from the
-command line by typing "`kill -SIGUSR1 _nnnn_`".)
+command line by typing "`kill -SIGUSR1 nnnn`".)
 
 ## Catching Signals for Fun and Profit!
 
