@@ -53,7 +53,7 @@ signals that aren't reserved: `SIGUSR1` and `SIGUSR2`. You are free to
 use these for whatever you want and handle them in whatever way you
 choose. (For example, my cd player program might respond to `SIGUSR1` by
 advancing to the next track. In this way, I could control it from the
-command line by typing "`kill -SIGUSR1 `nnnn``".)
+command line by typing "`kill -SIGUSR1 _nnnn_`".)
 
 ## Catching Signals for Fun and Profit!
 
