@@ -14,7 +14,7 @@ flavor of Unix, `pipe()` and [`fork()`](#fork) make up the functionality
 behind the "`|`" in "`ls | more`". They are marginally useful for cool
 things, but are a good way to learn about basic methods of IPC.
 
-Since they're so very very easy, I shant spent much time on them. We'll
+Since they're so very very easy, I shant spend much time on them. We'll
 just have some examples and stuff.
 
 ## "These pipes are clean!"
