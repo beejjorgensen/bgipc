@@ -51,7 +51,7 @@ Are all the signals predefined? What if you want to send a signal that
 has significance that only you understand to a process? There are two
 signals that aren't reserved: `SIGUSR1` and `SIGUSR2`. You are free to
 use these for whatever you want and handle them in whatever way you
-choose. (For example, my cd player program might respond to `SIGUSR1` by
+choose. (For example, my CD player program might respond to `SIGUSR1` by
 advancing to the next track. In this way, I could control it from the
 command line by typing "`kill -SIGUSR1 nnnn`".)
 
