@@ -113,9 +113,9 @@ of course.
 
 If you have multiple processes manipulating the data in the same file
 concurrently, you could be in for troubles. You might have to [lock the
-file](#flocking) or use [semaphores](#semaphores) to regulate access to
-the file while a process messes with it. Look at the [Shared
-Memory](#shmcon) document for a (very little bit) more concurrency
+file](#flocking) or use [semaphores](#svsemaphores) to regulate access
+to the file while a process messes with it. Look at the [Shared
+Memory](#svshmcon) document for a (very little bit) more concurrency
 information.
 
 ## A simple sample

@@ -7,11 +7,11 @@
 <!-- Semaphores -->
 <!-- ======================================================= -->
 
-# Semaphores {#semaphores}
+# System V Semaphores {#svsemaphores}
 
 Remember [file locking](#flocking)? Well, semaphores can be thought of
 as really generic advisory locking mechanisms. You can use them to
-control access to files, [shared memory](#shm), and, well, just about
+control access to files, [shared memory](#svshm), and, well, just about
 anything you want. The basic functionality of a semaphore is that you
 can either set it, check it, or wait until it clears then set it
 ("test-n-set"). No matter how complex the stuff that follows gets,
@@ -47,7 +47,7 @@ int semget(key_t key, int nsems, int semflg);
 
 What's the `key`? It's a unique identifier that is used by different
 processes to identify this semaphore set. (This `key` will be generated
-using `ftok()`, described in the [Message Queues section](#mqftok).)
+using `ftok()`, described in the [Message Queues section](#svmqftok).)
 
 The next argument, `nsems`, is (you guessed it!) the number of
 semaphores in this semaphore set. The maximum number is system
@@ -468,7 +468,7 @@ stuff all day long!
 I might have understated the usefulness of semaphores. I assure you,
 they're very very very useful in a concurrency situation. They're often
 faster than regular file locks, too. Also, you can use them on other
-things that aren't files, such as [Shared Memory Segments](#shm)! In
+things that aren't files, such as [Shared Memory Segments](#svshm)! In
 fact, it is sometimes hard to live without them, quite frankly.
 
 Whenever you have multiple processes running through a critical

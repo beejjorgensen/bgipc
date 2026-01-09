@@ -204,5 +204,5 @@ Having the name of the pipe right there on disk sure makes it easier,
 doesn't it? Unrelated processes can communicate via pipes! (This is an
 ability you will find yourself wishing for if you use normal pipes for
 too long.)  Still, though, the functionality of pipes might not be quite
-what you need for your applications. [Message queues](#mq) might be more
+what you need for your applications. [Message queues](#svmq) might be more
 your speed, if your system supports them.

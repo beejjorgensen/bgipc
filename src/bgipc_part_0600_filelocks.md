@@ -238,8 +238,8 @@ picture---well, I've heard about them.
 
 Locks rule. Sometimes, though, you might need more control over your
 processes in a producer-consumer situation. For this reason, if no
-other, you should see the document on System V [semaphores](#semaphores)
-(or POSIX, for that matter; they aren't identical) if your system
-supports such a beast. They provide a more extensive and at least
-equally function equivalent to file locks.
+other, you should see the document on System V
+[semaphores](#svsemaphores) (or POSIX, for that matter; they aren't
+identical) if your system supports such a beast. They provide a more
+extensive and at least equally function equivalent to file locks.
 

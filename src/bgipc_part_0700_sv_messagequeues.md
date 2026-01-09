@@ -7,7 +7,7 @@
 <!-- Message Queues -->
 <!-- ======================================================= -->
 
-# Message Queues {#mq}
+# System V Message Queues {#svmq}
 
 Those people who brought us System V have seen fit to include some IPC
 goodies that have been implemented on various platforms (including
@@ -67,7 +67,7 @@ the user-id and group-id of the program that created them.)
 
 A sample call is given in the following section.
 
-## "Are you the Key Master?" {#mqftok}
+## "Are you the Key Master?" {#svmqftok}
 
 What about this `key` nonsense? How do we create one? Well, since the
 type `key_t` is actually just a `long`, you can use any number you want.

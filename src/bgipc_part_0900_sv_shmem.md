@@ -7,7 +7,7 @@
 <!-- Shared Memory Segments -->
 <!-- ======================================================= -->
 
-# Shared Memory Segments {#shm}
+# System V Shared Memory Segments {#svshm}
 
 The cool thing about shared memory segments is that they are what they
 sound like: a segment of memory that is shared between processes. I
@@ -35,8 +35,8 @@ int shmget(key_t key, size_t size, int shmflg);
 
 Upon successful completion, `shmget()` returns an identifier for the
 shared memory segment. The `key` argument should be created the same was
-as shown in the [Message Queues](#mqftok) document, using `ftok()`. The
-next argument, `size`, is the size in bytes of the shared memory
+as shown in the [Message Queues](#svmqftok) document, using `ftok()`.
+The next argument, `size`, is the size in bytes of the shared memory
 segment. Finally, the `shmflg` should be set to the permissions of the
 segment bitwise-OR'd with `IPC_CREAT` if you want to create the segment,
 but can be `0` otherwise. (It doesn't hurt to specify `IPC_CREAT` every
@@ -178,7 +178,7 @@ any unused shared memory segments sitting around wasting system
 resources. All the System V IPC objects you own can be viewed using the
 `ipcs` command.
 
-## Concurrency {#shmcon}
+## Concurrency {#svshmcon}
 
 What are concurrency issues? Well, since you have multiple processes
 modifying the shared memory segment, it is possible that certain errors
@@ -186,7 +186,7 @@ could crop up when updates to the segment occur simultaneously. This
 _concurrent_ access is almost always a problem when you have multiple
 writers to a shared object.
 
-The way to get around this is to use [Semaphores](#semaphores) to lock
+The way to get around this is to use [Semaphores](#svsemaphores) to lock
 the shared memory segment while a process is writing to it. (Sometimes
 the lock will encompass both a read and write to the shared memory,
 depending on what you're doing.)
