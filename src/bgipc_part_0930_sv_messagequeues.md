@@ -12,9 +12,13 @@
 Those people who brought us System V have seen fit to include some IPC
 goodies that have been implemented on various platforms (including
 Linux, of course.)  This document describes the usage and functionality
-of the extremely groovy System V Message Queues! Linux also supports a
-POSIX version of each of these; see _mq_overview_, _sem_overview_, and
-_shm_overview_ in the man pages.
+of the extremely groovy System V Message Queues!
+
+Now, before we begin, this information is now a bit *dated*. Well,
+actually, the information is good, but there is a newer [POSIX message
+queue API, as described in an earlier chapter of this guide](#mq), that
+is better suited for modern life. But maybe you're on an older machine
+or are just out for a nostalgic time. If so, read on!
 
 As usual, I want to spew some overview at you before getting into the
 nitty-gritty. A message queue works kind of like a [FIFO](#fifos), but
