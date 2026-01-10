@@ -4,6 +4,9 @@ fork1
 kirk
 lockdemo
 mmapdemo
+mq_receiver
+mq_sender
+mq_unlink
 pipe1
 pipe2
 pipe3
