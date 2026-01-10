@@ -198,6 +198,47 @@ there is no data in the pipe, or because the writer has exited. This is
 the price of power, but my suggestion is to try to stick with blocking
 whenever possible.
 
+## Interleaving Data
+
+What happens if you have multiple writers dumping stuff in the pipe at
+the same time? Can it get interleaved?
+
+Maybe! Depends on how much data you're pouring in in a single call to
+`write()`. As long as you don't exceed `PIPE_BUF` bytes in your
+`write()`, it will be atomic[^6a1b]. And that's good!
+
+[^6a1b]: POSIX says `PIPE_BUF` will be at least 512 bytes. So that's
+    your portable safe zone.
+
+That said, there's nothing requiring that the corresponding `read()`
+calls get individual chunks of data out. We might have this happen:
+
+``` {.default}
+write "Foo" 
+write "bar" 
+```
+
+And then a read gives us:
+
+``` {.default}
+read "Foobar" 
+```
+
+Or maybe the read is short!
+
+``` {.default}
+read "Foob" 
+read "ar" 
+```
+
+So even if you have atomic writes, you're going to need some additional
+structure on the read end to make sure you're getting the right data out
+the other side. Sometime this is do by prepending the data with a
+length or having fixed-length messages.
+
+But in any case, you'll have to make sure you have a complete message or
+else you'll have to call `read()` again until you do.
+
 ## Concluding Notes
 
 Having the name of the pipe right there on disk sure makes it easier,
