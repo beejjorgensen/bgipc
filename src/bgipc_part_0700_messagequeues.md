@@ -114,6 +114,7 @@ you can tell it if the queue should be _blocking_ or not. More on that
 later.
 
 |Flag|Description|
+|-|-|
 |`O_RDONLY`|Open for receiving only|
 |`O_WRONLY`|Open for sending only|
 |`O_RDWR`|Open for both receiving and sending|
