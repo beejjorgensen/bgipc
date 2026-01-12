@@ -35,7 +35,9 @@ int main(int argc, char *argv[])
 
 	offset = atoi(argv[1]);
 	if (offset < 0 || offset > sbuf.st_size-1) {
-		fprintf(stderr, "mmapdemo: offset must be in the range 0-%ld\n", sbuf.st_size-1);
+        // On MacOS the size is a long long, so we cast to make it more
+        // portable
+		fprintf(stderr, "mmapdemo: offset must be in the range 0-%lld\n", (long long)sbuf.st_size-1);
 		exit(1);
 	}
 	
@@ -44,7 +46,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	printf("byte at offset %ld is '%c'\n", offset, data[offset]);
+	printf("byte at offset %lld is '%c'\n", (long long)offset, data[offset]);
 
 	return 0;
 }

@@ -1,3 +1,8 @@
+#ifdef __APPLE__
+#warning Apple doesn't support POSIX message queues.
+int main(void) {}
+#else
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <mqueue.h>
@@ -30,3 +35,4 @@ int main(void)
     mq_close(mqdes);
 }
 
+#endif
