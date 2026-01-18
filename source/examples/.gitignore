@@ -3,6 +3,7 @@ echos
 fork1
 kirk
 lockdemo
+mmap_anon
 mmapdemo
 mq_receiver
 mq_sender

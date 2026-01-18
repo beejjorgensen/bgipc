@@ -18,11 +18,16 @@ if you could just map a section of the file to memory, and get a pointer
 to it? Then you could simply use pointer arithmetic to get (and set)
 data in the file.
 
-Well, this is exactly what a memory mapped file is. And it's really easy
-to use, too. A few simple calls, mixed with a few simple rules, and
-you're mapping like a mad-person.
+Well, this is exactly what a memory mapped file is. The cool part is
+that as you make changes to memory (by changing things that pointers
+point to), _it actually changes the file, itself_. Memory suddenly
+becomes a window onto the file and you can change it directly though
+that window.
 
-## Mapmake
+And it's really easy to use, too. A few simple calls, mixed with a few
+simple rules, and you're mapping like a mad-person.
+
+## Getting Started
 
 Before mapping a file to memory, you need to get a file descriptor for
 it by using the `open()` system call:
@@ -118,7 +123,7 @@ to the file while a process messes with it. Look at the [Shared
 Memory](#svshmcon) document for a (very little bit) more concurrency
 information.
 
-## A simple sample
+## A Simple Sample
 
 Well, it's code time again. I've got here a demo program that maps its
 own source to memory and prints the byte that's found at whatever offset
@@ -149,18 +154,18 @@ int main(int argc, char *argv[])
     struct stat sbuf;
 
     if (argc != 2) {
-            fprintf(stderr, "usage: mmapdemo offset\n");
-            exit(1);
+        fprintf(stderr, "usage: mmapdemo offset\n");
+        exit(1);
     }
 
     if ((fd = open("mmapdemo.c", O_RDONLY)) == -1) {
-            perror("open");
-            exit(1);
+        perror("open");
+        exit(1);
     }
 
     if (stat("mmapdemo.c", &sbuf) == -1) {
-            perror("stat");
-            exit(1);
+        perror("stat");
+        exit(1);
     }
 
 
@@ -193,6 +198,110 @@ byte at offset 30 is 'e'
 
 I'll leave it up to you to write some really cool programs using this
 system call.
+
+## Anonymous Memory Mapping
+
+It's possible to `mmap()` a region that's **not** backed by a file. It's
+just some zeroed-out memory that you suddenly have access to. Kinda like
+with `malloc()`, but, as we'll see, with a big important difference.
+
+Seems weird to want to do this—changes you make only exist in memory and
+are not persisted on disk—but it actually provides a nice way to set up
+some shared memory between related processes.
+
+> **Note that this isn't supported by POSIX.** That said, it's defined
+> in Linux and BSD (including MacOS), so we have pretty good coverage
+> over all popular platforms.
+>
+> Caveat #1: Some platforms historically defined `MAP_ANON`, but I think
+> they've mostly all also gone with `MAP_ANONYMOUS` now. So the latter
+> is the more portable bet.
+>
+> Caveat #2: Some platforms don't care what you specify as the file
+> descriptor with anonymous mappings, but MacOS wants it to be `-1`, so
+> use that.
+
+(Another use for this kind of `mmap()` is if you're writing your own
+memory allocator as a peer to `malloc()`. In that case, you'll need to
+get chunks of memory straight from the OS, and anonymous `mmap()` is a
+great way to do that. But that's not IPC, so we won't get into it.)
+
+Let's do a demo. This program will:
+
+1. Create a chunk of shared, anonymous (i.e. not backed by a file)
+   memory using `mmap()`.
+2. Fork a child process that will:
+   * Sleep for one second
+   * Print what's in shared memory.
+3. The parent process will:
+   * Store a string in shared memory.
+   * Wait for the child to complete.
+4. Then both parent and child will `munmap()` the memory, freeing it.
+
+The big elephant-in-the-room difference is that we don't call `open()`
+anywhere, and we don't have a file descriptor to pass to `mmap()`. We'll
+just set that to `-1` and the offset to `0`.
+
+Here is the source for [flx[`mmap_anon.c`|mmap_anon.c]]:
+
+``` {.c .numberLines}
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
+
+#define DATA_LEN 128 // bytes
+
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+
+int main(void)
+{
+    char *data = mmap(NULL, DATA_LEN, PROT_READ|PROT_WRITE,
+                      MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+
+    if (data == NULL) {
+        perror("mmap");
+        return 1;
+    }
+
+    switch (fork()) {
+        case -1:
+            perror("fork");
+            return 1;
+                
+        case 0:
+            puts("child: sleeping");
+            // Snooze so it's very likely the parent wins the race
+            sleep(1);
+            puts("child: reading");
+            printf("child: %s\n", data);
+            break;
+
+        default:
+            puts("parent: writing");
+            strcpy(data, "Hello from shared memory!");
+            puts("parent: waiting");
+            wait(NULL);
+            break;
+    }
+
+    munmap(data, 128);
+}
+```
+
+"Concurrency, again, again?!" You might have noticed that there's really
+no synchronization between the parent and the child. I just glazed over
+it by having the child sleep so that we could be highly confident that
+the parent had already written the data. That's not really good enough
+in any practical sense, so you might have to do more with semaphores or
+something similar to get the coordination you need to not have
+everything explode.
+
+And, really, if you have access to `pthreads`, just use that in this
+case. Everything else is just reinventing that wheel.
 
 ## Observations on memory mapping
 
