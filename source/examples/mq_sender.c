@@ -1,5 +1,5 @@
 #ifdef __APPLE__
-#warning Apple doesn't support POSIX message queues.
+#warning "Apple doesn't support POSIX message queues."
 int main(void) {}
 #else
 
