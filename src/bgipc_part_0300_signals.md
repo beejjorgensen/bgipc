@@ -14,22 +14,41 @@ signals. Basically, one process can "raise" a signal and have it
 delivered to another process. The destination process's signal handler
 (just a function) is invoked and the process can handle it.
 
+This is an interestingly-different mechanism than you might be used to
+in that your program might be happily humming along doing whatever it
+wants, and then a signal is raised and your program is interrupted. Your
+code might be mid-function calculating π to 1.21 giga-decimal places and
+suddenly it stops doing that, and control passes to another function
+you've written (the _signal handler_) to handle the signal.
+
+And when the signal handler returns, control jumps back to your π
+calculation and continues where it left off. Or maybe the program just
+terminates! It depends on the signal and if-and-how you've decided to
+handle it.
+
 The devil's in the details, of course, and in actuality what you are
 permitted to do safely inside your signal handler is rather limited.
 Nevertheless, signals provide a useful service.
 
-For example, one process might want to stop another one, and this can be
-done by sending the signal `SIGSTOP` to that process. To continue, the
-process has to receive signal `SIGCONT`. How does the process know to do
-this when it receives a certain signal? Well, many signals are
-predefined and the process has a default signal handler to deal with it.
+For example, one process might want to temporarily stop another one, and
+this can be done by sending the signal `SIGSTOP` to that process. To
+continue, the process has to receive signal `SIGCONT`[^847f]. How does
+the process know to do this when it receives a certain signal? Well,
+many signals are predefined and the process has a default signal handler
+to deal with it.
+
+[^847f]: Fun fact: when you hit `CTRL-Z` in the terminal while you're
+    running a program in the foreground, it sends a `SIGSTOP` to that
+    process and the shell reports that it is stopped or suspended. If
+    you then type `fg`, it'll bring that process back to the foreground
+    and send it `SIGCONT` to keep running where it left off.
 
 A default handler? Yes. Take `SIGINT` for example. This is the interrupt
-signal that a process receives when the user hits `^C`. The default
+signal that a process receives when the user hits `CTRL-C`. The default
 signal handler for `SIGINT` causes the process to exit! Sound familiar?
-Well, as you can imagine, you can override the `SIGINT` to do whatever
-you want (or nothing at all!)  You could have your process `printf()`
-"Interrupt?! No way, Jose!" and go about its merry business.
+Well, as you can imagine, you can override the `SIGINT` signal to do
+whatever you want (or nothing at all!)  You could have your process
+print "Interrupt?! No way, Jose!" and go about its merry business.
 
 So now you know that you can have your process respond to just about any
 signal in just about any way you want. Naturally, there are exceptions
@@ -37,14 +56,14 @@ because otherwise it would be too easy to understand. Take the ever
 popular `SIGKILL`, signal #9. Have you ever typed "`kill -9 nnnn`" to
 kill a runaway process number `nnnn`? You were sending it `SIGKILL`. Now
 you might also remember that no process can get out of a "`kill -9`",
-and you would be correct. `SIGKILL` is one of the signals you `can't`
+and you would be correct. `SIGKILL` is one of the signals you **can't**
 add your own signal handler for. The aforementioned `SIGSTOP` is also in
 this category.
 
-(Aside: you often use the Unix "`kill`" command without specifying a
+(Aside: you often use the Unix `kill` command without specifying a
 signal to send...so what signal is it? The answer: `SIGTERM`. You can
 write your own handler for `SIGTERM` so your process won't respond to a
-regular "`kill`", and the user must then use "`kill -9`" to destroy the
+regular "`kill`", and the user must then use "`kill -9`" to end the
 process.)
 
 Are all the signals predefined? What if you want to send a signal that
@@ -116,7 +135,6 @@ delivered by hitting `^C`, called [flx[`sigint.c`|sigint.c]]:
 
 void sigint_handler(int sig)
 {
-        /* using a char[] so that sizeof will work */
     const char msg[] = "Ahhh! SIGINT!\n";
     write(0, msg, sizeof(msg));
 }
@@ -124,11 +142,11 @@ void sigint_handler(int sig)
 int main(void)
 {
     char s[200];
-        struct sigaction sa = {
-            .sa_handler = sigint_handler,
-            .sa_flags = 0, // or SA_RESTART
-            .sa_mask = 0,
-        };
+    struct sigaction sa = {
+        .sa_handler = sigint_handler,
+        .sa_flags = 0, // or SA_RESTART
+    };
+    sigemptyset(&sa.sa_mask);
 
     if (sigaction(SIGINT, &sa, NULL) == -1) {
         perror("sigaction");
@@ -201,7 +219,63 @@ You entered: This time fer sure!
 Some system calls are interruptible, and some can be restarted. It's
 system dependent.
 
-## The Handler is not Omnipotent
+## What about `signal()`
+
+ANSI C defines a function called `signal()` that can be used to catch
+signals. It's not as reliable or as full-featured as `sigaction()`, so
+use of `signal()`is generally discouraged.
+
+## Some signals to make you popular
+
+Here is a list of signals you (most likely) have at your disposal:
+
+|Signal|Description|
+|:-:|-|
+|`SIGABRT`|Process abort signal.|
+|`SIGALRM`|Alarm clock.|
+|`SIGFPE`|Erroneous arithmetic operation.|
+|`SIGHUP`|Hangup.|
+|`SIGILL`|Illegal instruction.|
+|`SIGINT`|Terminal interrupt signal.|
+|`SIGKILL`|Kill (cannot be caught or ignored).|
+|`SIGPIPE`|Write on a pipe with no one to read it.|
+|`SIGQUIT`|Terminal quit signal.|
+|`SIGSEGV`|Invalid memory reference.|
+|`SIGTERM`|Termination signal.|
+|`SIGUSR1`|User-defined signal 1.|
+|`SIGUSR2`|User-defined signal 2.|
+|`SIGCHLD`|Child process terminated or stopped.|
+|`SIGCONT`|Continue executing, if stopped.|
+|`SIGSTOP`|Stop executing (cannot be caught or ignored).|
+|`SIGTSTP`|Terminal stop signal.|
+|`SIGTTIN`|Background process attempting read.|
+|`SIGTTOU`|Background process attempting write.|
+|`SIGBUS`|Bus error.|
+|`SIGPOLL`|Pollable event.|
+|`SIGPROF`|Profiling timer expired.|
+|`SIGSYS`|Bad system call.|
+|`SIGTRAP`|Trace/breakpoint trap.|
+|`SIGURG`|High bandwidth data is available at a socket.|
+|`SIGVTALRM`|Virtual timer expired.|
+|`SIGXCPU`|CPU time limit exceeded.|
+|`SIGXFSZ`|File size limit exceeded.|
+
+Each signal has its own default signal handler, the behavior of which is
+defined in your local man pages.
+
+## The Dragons of Reentrancy
+
+If you're busy doing something with global or static data (let's call
+that variable `alvin`) and then you get interrupted, what happens if the
+handler *also* modifies `alvin`? And then the handler returns and
+`alvin` has been messed with behind your back! And your function has no
+way to know it!
+
+
+TODO
+
+
+### What Standard Functions Are Reentrant?
 
 You have to be careful when you make function calls in your signal
 handler. Those functions must be "async safe", so they can be called
@@ -244,6 +318,8 @@ handler (as long they don't call any non-async-safe functions.)
 
 But wait---there's more!
 
+TODO
+
 You also cannot safely alter any shared (e.g. global) data, with one
 notable exception: variables that are declared to be of storage class
 and type `volatile sig_atomic_t`.
@@ -268,11 +344,11 @@ void sigusr1_handler(int sig)
 
 int main(void)
 {
-        struct sigaction sa = {
-            .sa_handler = sigusr1_handler,
-            .sa_flags = 0, // or SA_RESTART
-            .sa_mask = 0,
-        };
+    struct sigaction sa = {
+        .sa_handler = sigusr1_handler,
+        .sa_flags = 0, // or SA_RESTART
+    };
+    sigemptyset(&sa.sa_mask);
 
     got_usr1 = 0;
 
@@ -319,50 +395,6 @@ Done in by SIGUSR1!
 
 (And the response should be immediate even if `sleep()` has just been
 called---`sleep()` gets interrupted by signals.)
-
-## What about `signal()`
-
-ANSI C defines a function called `signal()` that can be used to catch
-signals. It's not as reliable or as full-featured as `sigaction()`, so
-use of `signal()`is generally discouraged.
-
-## Some signals to make you popular
-
-Here is a list of signals you (most likely) have at your disposal:
-
-|Signal|Description|
-|:-:|-|
-|`SIGABRT`|Process abort signal.|
-|`SIGALRM`|Alarm clock.|
-|`SIGFPE`|Erroneous arithmetic operation.|
-|`SIGHUP`|Hangup.|
-|`SIGILL`|Illegal instruction.|
-|`SIGINT`|Terminal interrupt signal.|
-|`SIGKILL`|Kill (cannot be caught or ignored).|
-|`SIGPIPE`|Write on a pipe with no one to read it.|
-|`SIGQUIT`|Terminal quit signal.|
-|`SIGSEGV`|Invalid memory reference.|
-|`SIGTERM`|Termination signal.|
-|`SIGUSR1`|User-defined signal 1.|
-|`SIGUSR2`|User-defined signal 2.|
-|`SIGCHLD`|Child process terminated or stopped.|
-|`SIGCONT`|Continue executing, if stopped.|
-|`SIGSTOP`|Stop executing (cannot be caught or ignored).|
-|`SIGTSTP`|Terminal stop signal.|
-|`SIGTTIN`|Background process attempting read.|
-|`SIGTTOU`|Background process attempting write.|
-|`SIGBUS`|Bus error.|
-|`SIGPOLL`|Pollable event.|
-|`SIGPROF`|Profiling timer expired.|
-|`SIGSYS`|Bad system call.|
-|`SIGTRAP`|Trace/breakpoint trap.|
-|`SIGURG`|High bandwidth data is available at a socket.|
-|`SIGVTALRM`|Virtual timer expired.|
-|`SIGXCPU`|CPU time limit exceeded.|
-|`SIGXFSZ`|File size limit exceeded.|
-
-Each signal has its own default signal handler, the behavior of which is
-defined in your local man pages.
 
 ## What I have Glossed Over
 

@@ -22,6 +22,7 @@ int main(void)
 	    .sa_handler = sigint_handler,
 	    .sa_flags = 0, // or SA_RESTART
 	};
+    sigemptyset(&sa.sa_mask);
 
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
 		perror("sigaction");

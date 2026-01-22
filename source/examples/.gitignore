@@ -14,6 +14,7 @@ pipe3
 semdemo
 semrm
 shmdemo
+sigcount
 sigint
 sigusr
 spair

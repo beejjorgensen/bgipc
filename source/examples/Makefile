@@ -1,6 +1,6 @@
 BIN=echoc echos fork1 kirk lockdemo mmap_anon mmapdemo mq_receiver \
-	mq_sender mq_unlink pipe1 pipe2 pipe3 semdemo semrm shmdemo sigint \
-	sigusr spair speak spock tick
+	mq_sender mq_unlink pipe1 pipe2 pipe3 semdemo semrm shmdemo sigcount \
+	sigint sigusr spair speak spock tick
 
 CC=gcc
 CCOPTS=-Wall -Wextra

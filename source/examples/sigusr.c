@@ -23,6 +23,7 @@ int main(void)
 	    .sa_handler = sigusr1_handler,
 	    .sa_flags = 0, // or SA_RESTART
 	};
+    sigemptyset(&sa.sa_mask);
 
 	got_usr1 = 0;
 
