@@ -11,6 +11,8 @@ mq_unlink
 pipe1
 pipe2
 pipe3
+pipesig
+pselect
 semdemo
 semrm
 shmdemo
