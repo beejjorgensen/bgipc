@@ -11,10 +11,12 @@
 #include <sys/sem.h>
 
 #define MAX_RETRIES 10
-#define NEED_SEMUN
 
-#ifdef NEED_SEMUN
-/* Defined in sys/sem.h as required by POSIX now */
+// The Single Unix Specification says that applications must define
+// union semun themselves. But some systems have it already.
+#define NEED_UNION_SEMUN !defined(__APPLE__)
+
+#if NEED_UNION_SEUMUN
 union semun {
 	int val;
 	struct semid_ds *buf;

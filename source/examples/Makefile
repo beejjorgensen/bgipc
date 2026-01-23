@@ -1,16 +1,15 @@
-BIN=echoc echos fork1 kirk lockdemo mmap_anon mmapdemo mq_receiver \
-	mq_sender mq_unlink pipe1 pipe2 pipe3 semdemo semrm shmdemo sigcount \
-	sigint sigusr spair speak spock tick
+SRCS=$(wildcard *c)
+TARGETS=$(patsubst %.c,%,$(SRCS))
 
 CC=gcc
 CCOPTS=-Wall -Wextra
 
 .PHONY: all clean pristine
 
-all: $(BIN)
+all: $(TARGETS)
 
 clean:
-	rm -f $(BIN)
+	rm -f $(TARGETS)
 	rm -f american_maid
 
 pristine: clean

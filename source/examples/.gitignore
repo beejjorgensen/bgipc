@@ -16,6 +16,7 @@ semrm
 shmdemo
 sigcount
 sigint
+sigstrtok
 sigusr
 spair
 speak
