@@ -16,6 +16,7 @@ pselect
 semdemo
 semrm
 shmdemo
+sigblock
 sigcount
 sigint
 sigstrtok

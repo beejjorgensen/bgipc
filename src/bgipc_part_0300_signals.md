@@ -269,7 +269,9 @@ If you're busy doing something with global or static data (let's call
 that variable `alvin`) and then you get interrupted, what happens if the
 handler *also* modifies `alvin`? And then the handler returns and
 `alvin` has been messed with behind your back! And your function has no
-way to know it!
+way to know it! Worse, large data structures might be only _partially_
+written to when the handler is called, leading to tearing and horrible
+state mashing.
 
 We call these _reentrancy problems_. A function is deemed _reentrant_ if
 you can safely call it in the signal handler without causing other
@@ -293,7 +295,7 @@ void handler(int sig)
 {
     (void)sig;
 
-    count = -1235;
+    count = 123;
 }
 
 void increment(void)
@@ -468,10 +470,24 @@ But wait---there's more!
 
 You cannot safely alter any shared (e.g. global) data, with one notable
 exception: variables that are declared to be of storage class and type
-`volatile sig_atomic_t`. And in the handler, you're very restricted: you
-may assign to it, *but not read from it*. This means just `=`. No `++`,
-`+=`, or anything like that. Obviously, you can read it from *outside*
-the handler.
+`volatile sig_atomic_t`. This is an integer type that holds some range
+of values; the C spec guarantees that you'll be at least able to hold 0
+to 127, inclusive. But the actual range depends on the system and
+whether or not the type is signed. (You can look at `SIG_ATOMIC_MIN` and
+`SIG_ATOMIC_MAX` to see what your limits are.)
+
+The spec is very conservative. It basically says you're being very bad
+if you do anything with global data other than assign to a variable to
+type `volatile sig_atomic_t`. But that's not _super_ true. It's
+_probably_ safe to read from the variable, as well, but be advised that
+as soon as you read and write to the same variable you're definitely
+opening yourself up to some race conditions depending on who else reads
+and modifies those values.
+
+Another exception is global shared data that never changes. If you set
+up some global variables before the signal handler is installed, and you
+never change those values, then the signal handler can read them with
+impunity. They can be any type.
 
 Here's an example that handles `SIGUSR1` by setting a global flag, which
 is then examined in the main loop to see if the handler was called.
@@ -553,15 +569,12 @@ that isn't able to handle it?
 That is a bit a of drawback, but structuring the code this way has one
 big gain: *bye bye, reentrancy issues!* And that's no bad thing.
 
-## Blocking Signals
-
-TODO
-
 ## What I have Glossed Over
 
 Nearly all of it. There are tons of flags, realtime signals, mixing
 signals with threads, masking signals, `longjmp()` and signals, and
-more.
+more. I do have another chapter following this one with more in-depth
+material, but I could make a whole guide just out of this one topic!
 
 Of course, this is just a "getting started" guide, but in a last-ditch
 effort to give you more information, here is a list of man pages with

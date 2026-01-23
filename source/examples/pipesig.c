@@ -65,7 +65,8 @@ restart:
             else if ((pollfds[1].revents & POLLIN)) {
                 char sigdata[1024];
 
-                int count = read(pipefd[0], sigdata, sizeof sigdata);
+                int count = read(pipefd[0], sigdata,
+                                 sizeof sigdata);
 
                 for (int i = 0; i < count; i++)
                     if (sigdata[i] == '1')

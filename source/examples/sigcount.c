@@ -8,7 +8,7 @@ void handler(int sig)
 {
     (void)sig;
 
-    count = -1235;
+    count = 123;
 }
 
 void increment(void)
