@@ -271,9 +271,155 @@ handler *also* modifies `alvin`? And then the handler returns and
 `alvin` has been messed with behind your back! And your function has no
 way to know it!
 
+We call these _reentrancy problems_. A function is deemed _reentrant_ if
+you can safely call it in the signal handler without causing other
+callers to get unexpected results. Otherwise, it's not reentrant.
 
-TODO
+[flx[Here's a contrived example|sigcount.c]], partial listing below. The
+`increment()` function is not reentrant with respect to asynchronous
+signals..
 
+Imagine the `increment()` function slowly increasing the global `count`. But
+wait! If the signal handler fires at this time, it'll set the `count` to
+something that `increment()` isn't expecting! And then things blow up.
+
+(We'll get to `volatile sig_atomic_t` later; for now just assume it's
+`int`.)
+
+``` {.c}
+volatile sig_atomic_t count;
+
+void handler(int sig)
+{
+    (void)sig;
+
+    count = -1235;
+}
+
+void increment(void)
+{
+    int next_count = count + 1;
+
+    printf("Count is %d, next should be %d\n", count, next_count);
+
+    // Sleep to slow down time to demo the problem
+    sleep(2);
+    count++;
+
+    if (count == next_count)
+        puts("Everything is swell!");
+    else
+        printf("%d != %d! Aaa! ERROR DOES NOT COMPUTE!\n", count,
+            next_count);
+}
+```
+
+Your takeaway: any time you're reliant on some kind of shared state, you
+might have trouble with signals if the signal handler also messes with
+that shared state.
+
+[flx[Here's another example using `strtok()`|sigstrtok.c]], which is a
+notoriously non-reentrant function.
+
+``` {.c}
+void handler(int sig)
+{
+    (void)sig;
+
+    char x[] = "Hello, world!";
+    char *token;
+
+    if ((token = strtok(x, " ")) != NULL) do {
+        write(1, "In handler: ", 12);
+        write(1, token, strlen(token));
+        write(1, "\n", 1);
+    } while ((token = strtok(NULL, " ")) != NULL);
+}
+
+void tokenizer(void)
+{
+    char s[] = "The quick brown fox jumped over the lazy dogs";
+    char *token;
+
+    if ((token = strtok(s, " ")) != NULL) do {
+        printf("In main: %s\n", token);
+        // Sleep to slow down time to demo the problem
+        sleep(1);
+    } while ((token = strtok(NULL, " ")) != NULL);
+
+    puts("Done tokenizing");
+}
+```
+
+Let's say that two seconds into the `tokenizer()` function, the signal
+handler is called. The `handler()` does its own tokenizing of its own
+string and prints the tokens[^2baf].
+
+[^2baf]: And it uses `write()` because `printf()` is not reentrant!
+
+If everything went well and sensibly, we'd see this output (but we
+don't):
+
+``` {.default}
+In main: The
+In main: quick
+In handler: Hello,
+In handler: world!
+In main: brown
+In main: fox
+In main: jumped
+In main: over
+In main: the
+In main: lazy
+In main: dogs
+Done tokenizing
+```
+
+See how the signal occurred, was handled, and `tokenizer()` just
+continued where it left off? That would be great, right?
+
+Instead we see this (probably):
+
+``` {.default}
+In main: The
+In main: quick
+In handler: Hello,
+In handler: world!
+Done tokenizing
+```
+
+Where's the rest of it?
+
+Well, `strtok()` maintains some internal state in a `static` variable.
+Our `tokenize()` function was expecting the state to be a certain way,
+and the signal handler overwrote it, causing `tokenize()` to misbehave.
+
+And this makes `strtok()` non-reentrant (and, by association,
+`tokenize()` is therefore also non-reentrant).
+
+The fix is easy, though. We just need a reentrant version of `strtok()`
+that doesn't have internal shared state. And we have one in
+`strtok_r()`. With that, *we* own the state and we pass it in for
+`strtok_r()` to use. Every part of the code that wants a `strtok_r()`
+loop will have its own state and no one will step on each others toes.
+
+Here's the code for `strtok_r()` for the `tokenizer()` function (it's
+similar for the `handler()` function):
+
+``` {.c}
+    char *lasts;
+
+    if ((token = strtok_r(s, " ", &lasts)) != NULL) do {
+        printf("In main: %s\n", token);
+        // Sleep to slow down time to demo the problem
+        sleep(1);
+    } while ((token = strtok_r(NULL, " ", &lasts)) != NULL);
+```
+
+See how we're tracking our own state in `lasts`? If you replace all the
+`strtok()`s with `strtok_r()`s in the demo program, it will work
+properly since all the functionality used by both `handler()` and
+`tokenizer()` is reentrant.
 
 ### What Standard Functions Are Reentrant?
 
@@ -318,11 +464,14 @@ handler (as long they don't call any non-async-safe functions.)
 
 But wait---there's more!
 
-TODO
+## Shared Global Data
 
-You also cannot safely alter any shared (e.g. global) data, with one
-notable exception: variables that are declared to be of storage class
-and type `volatile sig_atomic_t`.
+You cannot safely alter any shared (e.g. global) data, with one notable
+exception: variables that are declared to be of storage class and type
+`volatile sig_atomic_t`. And in the handler, you're very restricted: you
+may assign to it, *but not read from it*. This means just `=`. No `++`,
+`+=`, or anything like that. Obviously, you can read it from *outside*
+the handler.
 
 Here's an example that handles `SIGUSR1` by setting a global flag, which
 is then examined in the main loop to see if the handler was called.
@@ -395,6 +544,18 @@ Done in by SIGUSR1!
 
 (And the response should be immediate even if `sleep()` has just been
 called---`sleep()` gets interrupted by signals.)
+
+It's a little counter-intuitive to structure the code this way.
+Shouldn't the handler have all the handling logic and some some other
+piece of code? What if the signal is raised when other code is running
+that isn't able to handle it?
+
+That is a bit a of drawback, but structuring the code this way has one
+big gain: *bye bye, reentrancy issues!* And that's no bad thing.
+
+## Blocking Signals
+
+TODO
 
 ## What I have Glossed Over
 
