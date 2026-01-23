@@ -14,9 +14,11 @@
 
 // The Single Unix Specification says that applications must define
 // union semun themselves. But some systems have it already.
-#define NEED_UNION_SEMUN !defined(__APPLE__)
+#if !defined(__APPLE__)
+#define NEED_UNION_SEMUN
+#endif
 
-#if NEED_UNION_SEUMUN
+#ifdef NEED_UNION_SEMUN
 union semun {
 	int val;
 	struct semid_ds *buf;
