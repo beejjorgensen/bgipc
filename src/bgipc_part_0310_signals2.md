@@ -216,36 +216,36 @@ pipe. The end.
 Let's look at how it's handled (code has been simplified here in the
 text—view the full source to see how it works):
 
-```
-    struct pollfd pollfds[2] = {
-        { .fd=0, .events=POLLIN },
-        { .fd=pipefd[0], .events=POLLIN },
-    };
+``` {.c}
+struct pollfd pollfds[2] = {
+    { .fd=0, .events=POLLIN },
+    { .fd=pipefd[0], .events=POLLIN },
+};
 
-    st = poll(pollfds, 2, 0);
+st = poll(pollfds, 2, 0);
 
-    // ...
+// ...
 
-    if ((pollfds[0].revents & POLLIN)) {
-        if (fgets(line, sizeof line, stdin) == NULL) return;
+if ((pollfds[0].revents & POLLIN)) {
+    if (fgets(line, sizeof line, stdin) == NULL) return;
 
-        int len = strlen(line);
-        if (line[len-1] == '\n') line[len-1] = '\0';
+    int len = strlen(line);
+    if (line[len-1] == '\n') line[len-1] = '\0';
 
-        if (strcmp(line, "quit") == 0) return;
+    if (strcmp(line, "quit") == 0) return;
 
-        printf("You entered: \"%s\"\n", line);
-    }
+    printf("You entered: \"%s\"\n", line);
+}
 
-    else if ((pollfds[1].revents & POLLIN)) {
-        char sigdata[1024];
+else if ((pollfds[1].revents & POLLIN)) {
+    char sigdata[1024];
 
-        int count = read(pipefd[0], sigdata, sizeof sigdata);
+    int count = read(pipefd[0], sigdata, sizeof sigdata);
 
-        for (int i = 0; i < count; i++)
-            if (sigdata[i] == '1')
-                printf("SIGUSR1 occurred\n");
-    }
+    for (int i = 0; i < count; i++)
+        if (sigdata[i] == '1')
+            printf("SIGUSR1 occurred\n");
+}
 ```
 
 There we set up our `pollfds` array to watch file descriptor `0`
@@ -291,7 +291,7 @@ to all the file descriptor monitoring it normally does?
 
 And so they made that.
 
-```
+``` {.c}
 #include <sys/select.h>
 
 int pselect(int nfds,
