@@ -1,7 +1,7 @@
 TITLE="Beej's Guide to Interprocess Communication"
 SUBTITLE=""
 AUTHOR='Brian “Beej Jorgensen” Hall'
-VERSION_DATE="v1.5.1, Copyright © January 23, 2026"
+VERSION_DATE="v1.5.2, Copyright © January 24, 2026"
 
 GUIDE_ID=bgipc
 BGBSPD_BUILD_DIR?=../../bgbspd

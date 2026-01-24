@@ -273,9 +273,20 @@ way to know it! Worse, large data structures might be only _partially_
 written to when the handler is called, leading to tearing and horrible
 state mashing.
 
-We call these _reentrancy problems_. A function is deemed _reentrant_ if
-you can safely call it in the signal handler without causing other
-callers to get unexpected results. Otherwise, it's not reentrant.
+We call these _reentrancy problems_. 
+
+What does that mean? If I might be permitted, I'll just lazily quote
+[flw[the Wikipedia article on reentrancy|Reentrancy_(computing)]]:
+
+> Reentrant code is designed to be safe and predictable when multiple
+> instances of the same function are called simultaneously or in quick
+> succession. A computer program or subroutine is called reentrant if
+> multiple invocations can safely run concurrently on multiple
+> processors, or if on a single-processor system its execution can be
+> interrupted and a new execution of it can be safely started (it can be
+> "re-entered"). The interruption could be caused by an internal action
+> such as a jump or call [...], or by an external action such as an
+> interrupt or signal. 
 
 [flx[Here's a contrived example|sigcount.c]], partial listing below. The
 `increment()` function is not reentrant with respect to asynchronous
@@ -423,49 +434,6 @@ See how we're tracking our own state in `lasts`? If you replace all the
 properly since all the functionality used by both `handler()` and
 `tokenizer()` is reentrant.
 
-### What Standard Functions Are Reentrant?
-
-You have to be careful when you make function calls in your signal
-handler. Those functions must be "async safe", so they can be called
-without invoking undefined behavior.
-
-You might be curious, for instance, why my signal handler, above, called
-`write()` to output the message instead of `printf()`. Well, the answer
-is that POSIX says that `write()` is async-safe (so is safe to call from
-within the handler), while `printf()` is not.
-
-The library functions and system calls that are async-safe and can be
-called from within your signal handlers are (breath):
-
-`_Exit()`, `_exit()`, `abort()`, `accept()`, `access()`, `aio_error()`,
-`aio_return()`, `aio_suspend()`, `alarm()`, `bind()`, `cfgetispeed()`,
-`cfgetospeed()`, `cfsetispeed()`, `cfsetospeed()`, `chdir()`, `chmod()`,
-`chown()`, `clock_gettime()`, `close()`, `connect()`, `creat()`,
-`dup()`, `dup2()`, `execle()`, `execve()`, `fchmod()`, `fchown()`,
-`fcntl()`, `fdatasync()`, `fork()`, `fpathconf()`, `fstat()`, `fsync()`,
-`ftruncate()`, `getegid()`, `geteuid()`, `getgid()`, `getgroups()`,
-`getpeername()`, `getpgrp()`, `getpid()`, `getppid()`, `getsockname()`,
-`getsockopt()`, `getuid()`, `kill()`, `link()`, `listen()`, `lseek()`,
-`lstat()`, `mkdir()`, `mkfifo()`, `open()`, `pathconf()`, `pause()`,
-`pipe()`, `poll()`, `posix_trace_event()`, `pselect()`, `raise()`,
-`read()`, `readlink()`, `recv()`, `recvfrom()`, `recvmsg()`, `rename()`,
-`rmdir()`, `select()`, `sem_post()`, `send()`, `sendmsg()`, `sendto()`,
-`setgid()`, `setpgid()`, `setsid()`, `setsockopt()`, `setuid()`,
-`shutdown()`, `sigaction()`, `sigaddset()`, `sigdelset()`,
-`sigemptyset()`, `sigfillset()`, `sigismember()`, `sleep()`, `signal()`,
-`sigpause()`, `sigpending()`, `sigprocmask()`, `sigqueue()`, `sigset()`,
-`sigsuspend()`, `sockatmark()`, `socket()`, `socketpair()`, `stat()`,
-`symlink()`, `sysconf()`, `tcdrain()`, `tcflow()`, `tcflush()`,
-`tcgetattr()`, `tcgetpgrp()`, `tcsendbreak()`, `tcsetattr()`,
-`tcsetpgrp()`, `time()`, `timer_getoverrun()`, `timer_gettime()`,
-`timer_settime()`, `times()`, `umask()`, `uname()`, `unlink()`,
-`utime()`, `wait()`, `waitpid()`, and `write()`.
-
-Of course, you can call your own functions from within your signal
-handler (as long they don't call any non-async-safe functions.)
-
-But wait---there's more!
-
 ## Shared Global Data
 
 You cannot safely alter any shared (e.g. global) data, with one notable
@@ -568,6 +536,64 @@ that isn't able to handle it?
 
 That is a bit a of drawback, but structuring the code this way has one
 big gain: *bye bye, reentrancy issues!* And that's no bad thing.
+
+### Asynchronous Signal Safety
+
+In light of all the reentrancy pitfalls you might hit, you have to be
+careful when you make function calls in your signal handler, and,
+indeed, when your handler modifies any global state that other functions
+might be using.
+
+Those functions must be _async-signal-safe_, which generally means that
+the function doesn't do anything that might cause reentrancy issues.
+
+In general, you're probably not async-signal-safe if you do any of this:
+
+* Modify an non-atomic global variable in your function.
+* Read a non-constant global variable that's not atomic.
+* Use `static` data in your function or in your handler.
+* Call any other function that's not async-signal-safe.
+
+It's pretty limited.
+
+You might be curious, for instance, why my earlier example signal
+handler called `write()` to output the message instead of `printf()`.
+Well, the answer is that POSIX says that `write()` is async-signal-safe
+(so is safe to call from within the handler), while `printf()` is not.
+
+The library functions and system calls that are async-signal-safe and
+can be called from within your signal handlers are (breath):
+
+`_Exit()`, `_exit()`, `abort()`, `accept()`, `access()`, `aio_error()`,
+`aio_return()`, `aio_suspend()`, `alarm()`, `bind()`, `cfgetispeed()`,
+`cfgetospeed()`, `cfsetispeed()`, `cfsetospeed()`, `chdir()`, `chmod()`,
+`chown()`, `clock_gettime()`, `close()`, `connect()`, `creat()`,
+`dup()`, `dup2()`, `execle()`, `execve()`, `fchmod()`, `fchown()`,
+`fcntl()`, `fdatasync()`, `fork()`, `fpathconf()`, `fstat()`, `fsync()`,
+`ftruncate()`, `getegid()`, `geteuid()`, `getgid()`, `getgroups()`,
+`getpeername()`, `getpgrp()`, `getpid()`, `getppid()`, `getsockname()`,
+`getsockopt()`, `getuid()`, `kill()`, `link()`, `listen()`, `lseek()`,
+`lstat()`, `mkdir()`, `mkfifo()`, `open()`, `pathconf()`, `pause()`,
+`pipe()`, `poll()`, `posix_trace_event()`, `pselect()`, `raise()`,
+`read()`, `readlink()`, `recv()`, `recvfrom()`, `recvmsg()`, `rename()`,
+`rmdir()`, `select()`, `sem_post()`, `send()`, `sendmsg()`, `sendto()`,
+`setgid()`, `setpgid()`, `setsid()`, `setsockopt()`, `setuid()`,
+`shutdown()`, `sigaction()`, `sigaddset()`, `sigdelset()`,
+`sigemptyset()`, `sigfillset()`, `sigismember()`, `sleep()`, `signal()`,
+`sigpause()`, `sigpending()`, `sigprocmask()`, `sigqueue()`, `sigset()`,
+`sigsuspend()`, `sockatmark()`, `socket()`, `socketpair()`, `stat()`,
+`symlink()`, `sysconf()`, `tcdrain()`, `tcflow()`, `tcflush()`,
+`tcgetattr()`, `tcgetpgrp()`, `tcsendbreak()`, `tcsetattr()`,
+`tcsetpgrp()`, `time()`, `timer_getoverrun()`, `timer_gettime()`,
+`timer_settime()`, `times()`, `umask()`, `uname()`, `unlink()`,
+`utime()`, `wait()`, `waitpid()`, and `write()`.
+
+Of course, you can call your own functions from within your signal
+handler (as long as they are async-signal-safe and don't call any
+non-async-signal-safe functions).
+
+In the next chapter, we'll look at some patterns for safely reacting
+when a signal is raised.
 
 ## What I have Glossed Over
 
