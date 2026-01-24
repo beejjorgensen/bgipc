@@ -279,7 +279,7 @@ callers to get unexpected results. Otherwise, it's not reentrant.
 
 [flx[Here's a contrived example|sigcount.c]], partial listing below. The
 `increment()` function is not reentrant with respect to asynchronous
-signals..
+signals.
 
 Imagine the `increment()` function slowly increasing the global `count`. But
 wait! If the signal handler fires at this time, it'll set the `count` to
