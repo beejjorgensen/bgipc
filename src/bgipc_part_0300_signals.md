@@ -112,9 +112,14 @@ We'll focus on these three fields in the `struct sigaction`:
 
 |Signal|Description|
 |------------|----------------------------------------------------------|
-|`sa_handler`|The signal handler function (or `SIG_IGN` to ignore the signal)|
+|`sa_handler`|The signal handler function|
 |`sa_mask`|A set of signals to block while this one is being handled|
 |`sa_flags`|Flags to modify the behavior of the handler, or `0`|
+
+`sa_handler` is a pointer to a function that returns `void` and takes a
+single `int` parameter (which will hold the signal number that it's
+handling. You can also specify `SIG_IGN` to ignore the signal, or
+`SIG_DEF` to set it to the default action.
 
 What about that `sa_mask` field? When you're handling a signal, you
 might want to block other signals from being delivered, and you can do
