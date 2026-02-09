@@ -140,8 +140,9 @@ delivered by hitting `^C`, called [flx[`sigint.c`|sigint.c]]:
 
 void sigint_handler(int sig)
 {
+    (void)sig;
     const char msg[] = "Ahhh! SIGINT!\n";
-    write(0, msg, sizeof(msg));
+    write(1, msg, sizeof msg  - 1);
 }
 
 int main(void)

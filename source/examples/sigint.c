@@ -11,8 +11,8 @@
 void sigint_handler(int sig)
 {
 	(void)sig; // remove unused variable warning
-
-	write(0, "Ahhh! SIGINT!\n", 14);
+    const char msg[] = "Ahhh! SIGINT!\n";
+    write(1, msg, sizeof msg  - 1);
 }
 
 int main(void)
