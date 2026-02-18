@@ -34,8 +34,8 @@ int shmget(key_t key, size_t size, int shmflg);
 ```
 
 Upon successful completion, `shmget()` returns an identifier for the
-shared memory segment. The `key` argument should be created the same was
-as shown in the [Message Queues](#svmqftok) document, using `ftok()`.
+shared memory segment. The `key` argument should be created the same as
+was shown in the [Message Queues](#svmqftok) document, using `ftok()`.
 The next argument, `size`, is the size in bytes of the shared memory
 segment. Finally, the `shmflg` should be set to the permissions of the
 segment bitwise-OR'd with `IPC_CREAT` if you want to create the segment,
