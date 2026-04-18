@@ -35,13 +35,10 @@ mkfifo("myfifo", 0644);
 ```
 
 In the above example, the FIFO file will be called "`myfifo`". The
-second argument is the creation mode, which is used to tell `mkfifo()`
-to make a FIFO (the `S_IFIFO` part of the OR) and sets access
-permissions to that file (octal 644, or `rw-r--r--`) which can also be
-set by ORing together macros from `sys/stat.h`. This permission is just
-like the one you'd set using the `chmod` command. Finally, a device
-number is passed. This is ignored when creating a FIFO, so you can put
-anything you want in there.
+second argument sets access permissions to that file
+(octal 644, or `rw-r--r--`) which can also be set by ORing together
+macros from `sys/stat.h`. This permission is just like the one you'd
+set using the `chmod` command.
 
 (An aside: a FIFO can also be created from the command line using the
 Unix `mkfifo` command.)
@@ -55,6 +52,11 @@ deprecated. For now, these two calls are equivalent:
 mknod("myfifo", S_IFIFO | 0644, 0);   // old way
 mkfifo("myfifo", 0644);               // new way
 ```
+In case of `mknod()` call, you used to have to do a little bit more
+work by specifying the creation mode in the second argument
+(extra OR S_IFIFO) and a device number as the last argument. This
+last argument is ignored when creating a FIFO, so you can put
+anything you want in there.
 
 But you should use `mkfifo()` to make FIFOs if your system supports it.
 
