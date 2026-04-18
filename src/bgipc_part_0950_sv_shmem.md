@@ -151,7 +151,7 @@ When you're done with the shared memory segment, your program should
 detach itself from it using the `shmdt()` call (if you don't, this will
 happen automatically when the process terminates):
 
-``` {.c{
+``` {.c}
 int shmdt(void *`shmaddr`);
 ```
 
