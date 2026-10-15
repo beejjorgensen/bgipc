@@ -410,11 +410,11 @@ Done tokenizing
 Where's the rest of it?
 
 Well, `strtok()` maintains some internal state in a `static` variable.
-Our `tokenize()` function was expecting the state to be a certain way,
-and the signal handler overwrote it, causing `tokenize()` to misbehave.
+Our `tokenizer()` function was expecting the state to be a certain way,
+and the signal handler overwrote it, causing `tokenizer()` to misbehave.
 
 And this makes `strtok()` non-reentrant (and, by association,
-`tokenize()` is therefore also non-reentrant).
+`tokenizer()` is therefore also non-reentrant).
 
 The fix is easy, though. We just need a reentrant version of `strtok()`
 that doesn't have internal shared state. And we have one in
